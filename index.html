@@ -1462,7 +1462,7 @@ function parseLevel(v){
   return'';
 }
 function parseSheet(rows){
-  const KEYS=['Mat_C1','Mat_C2','Civ_C1','Civ_C2','Ing_C1','Ing_C2','CN_C1','CN_C2','LC_C1','LC_C2'];
+  const KEYS=['CN_C1','CN_C2','Mat_C1','Mat_C2','Civ_C1','Civ_C2','LC_C1','LC_C2','Ing_C1','Ing_C2'];
   const COLS=[3,4,5,6,7,8,9,10,11,12];
   const map={};
   function codeInRow(r){for(let c=18;c<=25;c++){const v=String(r[c]||'').trim();if(/^\d{3,4}$/.test(v))return v;}return null;}
