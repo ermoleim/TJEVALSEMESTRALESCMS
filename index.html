@@ -569,7 +569,7 @@ tbody tr.new-row td{animation:rowflash .9s ease}
         <div style="margin-top:1.2rem">
           <h3 style="font-size:.9rem">⚡ Sincronización en tiempo real (Firebase)</h3>
           <p style="color:var(--txt2);font-size:.83rem;margin-bottom:1rem;line-height:1.6">
-            Este es el motor que hace que los cambios se vean al instante entre dispositivos — Google Sheets nunca fue diseñado para eso (solo "responde cuando le preguntas"; Firebase "avisa" apenas algo cambia). Se configura <strong style="color:var(--txt)">una sola vez</strong> aquí, y luego un desarrollador debe fijarla en el código (<code style="background:var(--surf2);padding:.1rem .35rem;border-radius:4px">DEFAULT_FIREBASE_CONFIG</code>) para que quede funcionando para todos los docentes automáticamente.
+            Este es el motor que hace que los cambios se vean al instante entre dispositivos. <strong style="color:var(--txt)">Ya está configurado de fábrica</strong> (viene fijo en el código, igual que la URL de Sheets) — todos los docentes quedan conectados automáticamente sin tocar nada aquí. Usa esta sección solo para diagnosticar una falla de conexión o si alguna vez necesitas cambiar de proyecto de Firebase.
           </p>
           <ol style="color:var(--txt2);font-size:.8rem;line-height:1.9;margin:0 0 1rem 1.1rem">
             <li>Entra a <a href="https://console.firebase.google.com" target="_blank" style="color:var(--acc2)">console.firebase.google.com</a> → Crear proyecto (gratis, sin tarjeta).</li>
@@ -1285,7 +1285,16 @@ const FIREBASE_CONFIG_KEY='ps_firebase_config_v1';
 // puedes pegarla aquí directamente (reemplazando `null`) para que quede
 // "de fábrica" para todos los docentes, igual que DEFAULT_GAS_URL — así
 // nadie más tiene que configurarla a mano.
-const DEFAULT_FIREBASE_CONFIG=null;
+const DEFAULT_FIREBASE_CONFIG={
+  apiKey: "AIzaSyD9CbkGDhGNlthejfbK-g4LzXb5GIuR8cQ",
+  authDomain: "jt-eval-semestrales.firebaseapp.com",
+  databaseURL: "https://jt-eval-semestrales-default-rtdb.firebaseio.com",
+  projectId: "jt-eval-semestrales",
+  storageBucket: "jt-eval-semestrales.firebasestorage.app",
+  messagingSenderId: "972650103077",
+  appId: "1:972650103077:web:490a4f7488f4452e74dacc",
+  measurementId: "G-EZR2DFSXNF"
+};
 let FIREBASE_CONFIG=(function(){
   try{
     const s=localStorage.getItem(FIREBASE_CONFIG_KEY);
