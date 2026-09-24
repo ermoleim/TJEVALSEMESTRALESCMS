@@ -637,6 +637,15 @@ tbody tr.new-row td{animation:rowflash .9s ease}
       </div>
     </div>
 
+    <!-- Crear Segundo Semestre -->
+    <div class="admin-panel">
+      <h3>🗓️ Crear Segundo Semestre</h3>
+      <p style="color:var(--txt2);font-size:.83rem;margin-bottom:1rem;line-height:1.6">
+        Abre el Segundo Semestre en todos los grados/niveles de una sola vez, copiando los mismos cursos y estudiantes de Primer Semestre con los desempeños en blanco — así cada docente entra y registra directamente sus resultados, sin depender de un Excel. Los espacios que ya tengan Segundo Semestre creado no se tocan.
+      </p>
+      <button class="btn sm grn" onclick="adminCrearSegundoSemestre()">🗓️ Crear Segundo Semestre (todos los niveles)</button>
+    </div>
+
     <!-- Reinicio anual -->
     <div class="admin-panel">
       <h3>🧹 Reiniciar para un nuevo año</h3>
@@ -777,8 +786,8 @@ tbody tr.new-row td{animation:rowflash .9s ease}
       <div class="sb-bottom">
         <button class="btn sm grn" onclick="goAnalysis()" style="width:100%">📊 Ver Análisis →</button>
         <button class="btn sm" id="btn-import-excel" onclick="openExcelImport()" style="width:100%;background:var(--acc3);color:#fff">📥 Importar Excel</button>
-        <button class="btn sm sky" onclick="exportJSON()" style="width:100%">💾 Exportar JSON</button>
-        <button class="btn sm" onclick="syncPush(false)" style="width:100%;background:var(--sup);color:#111">☁️ Sync Sheets</button>
+        <button class="btn sm sky" id="btn-export-json" onclick="exportJSON()" style="width:100%">💾 Exportar JSON</button>
+        <button class="btn sm" id="btn-sync-sheets" onclick="idxSyncPush(false)" style="width:100%;background:var(--sup);color:#111">☁️ Sync Sheets</button>
       </div>
     </div>
     <div class="emain">
@@ -788,8 +797,8 @@ tbody tr.new-row td{animation:rowflash .9s ease}
       <div class="etop">
         <h2 id="entry-hd">Curso</h2>
         <button class="btn sm out" onclick="sortAlpha()">🔤 A→Z</button>
-        <button class="btn sm out" onclick="document.getElementById('m-paste').classList.add('on')">📋 Pegar lista</button>
-        <button class="btn sm" onclick="addBlankRow()">＋ Estudiante</button>
+        <button class="btn sm out" id="btn-paste-list" onclick="document.getElementById('m-paste').classList.add('on')">📋 Pegar lista</button>
+        <button class="btn sm" id="btn-add-student" onclick="addBlankRow()">＋ Estudiante</button>
         <button class="btn sm red" id="btn-del-course" onclick="delCourse()">🗑 Curso</button>
       </div>
       <div class="tbl-wrap">
@@ -814,7 +823,7 @@ tbody tr.new-row td{animation:rowflash .9s ease}
           <tbody id="entry-tbody"></tbody>
         </table>
       </div>
-      <div class="addrow">
+      <div class="addrow" id="row-add-student">
         <input type="text" id="new-name" placeholder="Apellidos y nombres del estudiante..."
                onkeydown="if(event.key==='Enter')addNamed()">
         <button class="btn sm" onclick="addNamed()">＋ Agregar</button>
@@ -830,8 +839,8 @@ tbody tr.new-row td{animation:rowflash .9s ease}
   <div class="xbar">
     <span class="xmeta" id="xbar-meta"></span>
     <span class="save-ok" id="save-ok">✓ Guardado</span>
-    <button class="btn sm sky" onclick="exportJSON()">💾 Exportar JSON</button>
-    <button class="btn sm" onclick="syncPush(false)" style="background:var(--sup);color:#111">☁️ Sync Sheets</button>
+    <button class="btn sm sky" id="btn-export-json-a" onclick="exportJSON()">💾 Exportar JSON</button>
+    <button class="btn sm" id="btn-sync-sheets-a" onclick="idxSyncPush(false)" style="background:var(--sup);color:#111">☁️ Sync Sheets</button>
     <button class="btn sm out" onclick="showEntry()">✏️ Editar datos</button>
     <button class="btn sm" onclick="window.print()">🖨 Imprimir</button>
   </div>
@@ -1481,6 +1490,11 @@ function buildEntryUI(){
   document.getElementById('btn-add-course').style.display   = isAdmin?'':'none';
   document.getElementById('btn-import-excel').style.display = isAdmin?'':'none';
   document.getElementById('btn-del-course').style.display   = isAdmin?'':'none';
+  document.getElementById('btn-export-json').style.display  = isAdmin?'':'none';
+  document.getElementById('btn-sync-sheets').style.display  = isAdmin?'':'none';
+  document.getElementById('btn-paste-list').style.display   = isAdmin?'':'none';
+  document.getElementById('btn-add-student').style.display  = isAdmin?'':'none';
+  document.getElementById('row-add-student').style.display  = isAdmin?'':'none';
   document.getElementById('doc-inst-banner').style.display  = isAdmin?'none':'flex';
   const gSel=document.getElementById('doc-grado-sel');
   const gLbl=document.getElementById('doc-grado-lbl');
@@ -1549,6 +1563,7 @@ function _loadSpaceIntoST(sp){
   ST={
     _version:FILE_VERSION,inst:IDX.inst,
     grado:sp.grado,year:sp.year,sems:sp.sems,
+    jornada:sp.jornada||'',seccion:sp.seccion||'',
     activeSem:sp.sems[0],
     activeCourse:Object.keys(sp.data[sp.sems[0]]||{})[0]||null,
     activeAnalysisTab:'resumen',
@@ -1560,7 +1575,13 @@ function _loadSpaceIntoST(sp){
 // Sincroniza los cambios hechos en ST de vuelta al índice institucional
 function _pushSTtoIDX(){
   if(!ST||!ST.grado)return;
-  const sp=idxEnsureSpace(ST.grado,ST.year,ST.sems);
+  // OJO: idxEnsureSpace debe recibir jornada/sección — si se omiten,
+  // idxSpaceKey genera una clave distinta ("grado_año" en vez de
+  // "grado_año_jornada_sección") y crea/reutiliza un espacio FANTASMA
+  // separado del que realmente se está editando, duplicando el listado
+  // de "Espacios activos" y arriesgando que Firebase/Sheets terminen
+  // guardando dos copias independientes de los mismos datos.
+  const sp=idxEnsureSpace(ST.grado,ST.year,ST.sems,ST.jornada,ST.seccion);
   sp.sems=ST.sems;
   sp.data=ST.data;
   sp.analysis=ST.analysis;
@@ -1886,7 +1907,8 @@ function renderTbody(){
     <td><div class="ra">
       <button class="ib" onclick="mvS('${sem}','${c}',${i},-1)" title="Subir">↑</button>
       <button class="ib" onclick="mvS('${sem}','${c}',${i},1)"  title="Bajar">↓</button>
-      <button class="ib" onclick="rmS('${sem}','${c}',${i})"   title="Eliminar">🗑</button>
+      ${CURRENT_ROLE==='admin'?`<button class="ib" onclick="moveToC('${sem}','${c}',${i})" title="Mover a otro curso">🔀</button>
+      <button class="ib" onclick="rmS('${sem}','${c}',${i})" title="Eliminar">🗑</button>`:''}
     </div></td>
   </tr>`).join('');
 }
@@ -1896,11 +1918,50 @@ function isDup(nombre){const arr=ST.data[ST.activeSem]?.[ST.activeCourse]||[];re
 function blankSt(){const s={nombre:''};AREAS.forEach(a=>{s[a.c1]='';s[a.c2]='';});return s;}
 function mvS(sem,c,i,d){const a=ST.data[sem][c];const n=i+d;if(n<0||n>=a.length)return;[a[i],a[n]]=[a[n],a[i]];autoSave();renderTbody();}
 function rmS(sem,c,i){
+  if(CURRENT_ROLE!=='admin'){toast('Solo el administrador elimina estudiantes.','warn');return;}
   const nom=ST.data[sem][c][i].nombre||'este estudiante';
   if(!confirm(`¿Eliminar a ${nom}?`))return;
   ST.data[sem][c].splice(i,1);autoSave();buildTable();
 }
+// Mueve un estudiante a otro curso del mismo grado, conservando sus
+// desempeños ya registrados. Si el mismo estudiante (por nombre) también
+// está en el otro semestre bajo el curso de origen, se mueve ahí también
+// — un cambio de salón aplica al año completo, no solo al semestre que
+// se esté viendo en pantalla.
+function moveToC(sem,c,i){
+  if(CURRENT_ROLE!=='admin'){toast('Solo el administrador mueve estudiantes entre cursos.','warn');return;}
+  const st=ST.data[sem][c][i];
+  const nombre=st.nombre||'este estudiante';
+  const destinos=Object.keys(ST.data[sem]).filter(k=>k!==c);
+  if(!destinos.length){toast('No hay otro curso en este semestre para mover.','warn');return;}
+  const opciones=destinos.map((k,idx)=>`${idx+1}. Curso ${k} (${ST.data[sem][k].length})`).join('\n');
+  const sel=prompt(`Mover a "${nombre}" de Curso ${c} a:\n\n${opciones}\n\nEscribe el número:`);
+  const idx=parseInt(sel)-1;
+  if(isNaN(idx)||idx<0||idx>=destinos.length)return;
+  const destino=destinos[idx];
+  if(!confirm(`¿Mover a ${nombre} de Curso ${c} a Curso ${destino}?\n\nSus desempeños ya registrados se conservan.`))return;
+
+  ST.data[sem][c].splice(i,1);
+  ST.data[sem][destino].push(st);
+
+  let movedOther=false;
+  const otroSem=sem==='S1'?'S2':'S1';
+  if(ST.sems.includes(otroSem)&&ST.data[otroSem]?.[c]){
+    const arr2=ST.data[otroSem][c];
+    const idx2=arr2.findIndex(e=>normName(e.nombre)===normName(nombre));
+    if(idx2>=0){
+      if(!ST.data[otroSem][destino])ST.data[otroSem][destino]=[];
+      const[moved]=arr2.splice(idx2,1);
+      ST.data[otroSem][destino].push(moved);
+      movedOther=true;
+    }
+  }
+
+  autoSave();buildCourseList();buildTable();
+  toast(`${nombre} movido a Curso ${destino}.`+(movedOther?` (también en ${SEM_LABEL[otroSem]})`:''),'ok',4000);
+}
 function addBlankRow(){
+  if(CURRENT_ROLE!=='admin'){toast('Solo el administrador agrega estudiantes.','warn');return;}
   if(!ST.activeCourse){toast('Selecciona un curso primero.','warn');return;}
   ST.data[ST.activeSem][ST.activeCourse].push(blankSt());
   autoSave();buildTable();
@@ -1908,6 +1969,7 @@ function addBlankRow(){
   if(last){last.classList.add('new-row');last.scrollIntoView({behavior:'smooth',block:'nearest'});}
 }
 function addNamed(){
+  if(CURRENT_ROLE!=='admin'){toast('Solo el administrador agrega estudiantes.','warn');return;}
   const inp=document.getElementById('new-name');
   const n=inp.value.trim().toUpperCase();
   if(!n)return;
@@ -1920,6 +1982,7 @@ function addNamed(){
   if(last){last.classList.add('new-row');last.scrollIntoView({behavior:'smooth',block:'nearest'});}
 }
 function processPaste(){
+  if(CURRENT_ROLE!=='admin'){toast('Solo el administrador agrega estudiantes.','warn');return;}
   const lines=document.getElementById('paste-ta').value.trim().split('\n').map(l=>normName(l)).filter(l=>l.length>2);
   if(!ST.activeCourse){toast('Selecciona un curso.','warn');return;}
   const arr=ST.data[ST.activeSem][ST.activeCourse];
@@ -2005,6 +2068,8 @@ function buildAnalysis(){
   document.getElementById('anav').innerHTML=tabs.map(t=>`<div class="anavt ${ST.activeAnalysisTab===t.id?'on':''}" onclick="switchTab('${t.id}',this)">${t.lbl}</div>`).join('');
   const total=ST.sems.flatMap(s=>getAll(s)).length;
   document.getElementById('xbar-meta').textContent=`${GN[ST.grado]} · ${ST.year} · ${ST.sems.map(s=>SEM_LABEL[s]).join(' + ')} · ${total} registros`;
+  document.getElementById('btn-export-json-a').style.display=CURRENT_ROLE==='admin'?'':'none';
+  document.getElementById('btn-sync-sheets-a').style.display=CURRENT_ROLE==='admin'?'':'none';
   renderTab(ST.activeAnalysisTab);
 }
 function switchTab(id,el){
@@ -2623,6 +2688,45 @@ function adminExportConsolidated(scope){
   const a=document.createElement('a');a.href=URL.createObjectURL(b);
   a.download=`PruebasSemestrales_Consolidado_${scopeLabel}_${new Date().getFullYear()}.json`;a.click();
   toast(`Consolidado exportado: ${Object.keys(consolidated.grados).length} grados, ${totalEst} estudiantes.`,'ok',4000);
+}
+
+// ─── Crear Segundo Semestre en todos los espacios (copia cursos y
+//     estudiantes de S1 con desempeños en blanco, para que cada docente
+//     los registre directamente — reemplaza el flujo antiguo por Excel) ──
+function adminCrearSegundoSemestre(){
+  const keys=Object.keys(IDX.grados||{}).sort();
+  if(!keys.length){toast('No hay espacios institucionales todavía.','warn');return;}
+  const pendientes=keys.filter(k=>!(IDX.grados[k].sems||[]).includes('S2'));
+  if(!pendientes.length){toast('Todos los espacios ya tienen Segundo Semestre creado.','info');return;}
+  const resumen=pendientes.map(k=>{
+    const sp=IDX.grados[k];
+    const jsTag=(sp.jornada&&sp.seccion)?` · ${JORNADA_LABEL[sp.jornada]}/${SECCION_LABEL[sp.seccion]}`:'';
+    return `Grado ${GN[sp.grado]} · ${sp.year}${jsTag} (${k})`;
+  }).join('\n');
+  if(!confirm(`¿Crear el Segundo Semestre en ${pendientes.length} espacio(s)?\n\n${resumen}\n\nSe copiarán los mismos cursos y estudiantes de Primer Semestre, con los desempeños en blanco para que cada docente los registre directamente.\n\nLos espacios que ya tienen Segundo Semestre no se tocan.`))return;
+
+  let totalEst=0;
+  pendientes.forEach(k=>{
+    const sp=IDX.grados[k];
+    const s2={};
+    Object.entries(sp.data.S1||{}).forEach(([curso,estudiantes])=>{
+      s2[curso]=estudiantes.map(e=>{
+        const nuevo={nombre:e.nombre};
+        AREAS.forEach(a=>{nuevo[a.c1]='';nuevo[a.c2]='';});
+        totalEst++;
+        return nuevo;
+      });
+    });
+    sp.data.S2=s2;
+    if(!sp.sems.includes('S2'))sp.sems.push('S2');
+    if(!sp.analysis)sp.analysis={S1:{},S2:{},CMP:{},FINAL:{}};
+    if(!sp.analysis.S2)sp.analysis.S2={};
+  });
+
+  idxAutoSave();
+  idxSyncPush(false);
+  toast(`Segundo Semestre creado en ${pendientes.length} espacio(s) · ${totalEst} estudiante(s) listos para registrar.`,'ok',5500);
+  adminLoadSpaces();
 }
 
 // ─── Reinicio anual (vacía desempeños, conserva estructura) ─────────
