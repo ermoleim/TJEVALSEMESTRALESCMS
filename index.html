@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pruebas Semestrales — Colegio Miguel de Cervantes Saavedra I.E.D.</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
 <style>
 /* ── TEMAS ── */
 :root{
@@ -473,34 +475,6 @@ tbody tr.new-row td{animation:rowflash .9s ease}
       <h2 style="font-size:1.1rem;font-weight:700">⚙️ Panel de Administración</h2>
     </div>
 
-    <!-- Conexión con Apps Script -->
-    <div class="admin-panel" style="border-color:var(--acc)">
-      <h3>🔗 Conexión con Google Sheets (Apps Script)</h3>
-      <p style="color:var(--txt2);font-size:.83rem;margin-bottom:1rem;line-height:1.6">
-        La URL "de fábrica" (la que usan todos los docentes automáticamente, en cualquier navegador) está en el código (<code style="background:var(--surf2);padding:.1rem .35rem;border-radius:4px">DEFAULT_GAS_URL</code>).
-        Este campo solo guarda una URL alternativa <strong style="color:var(--txt)">en ESTE navegador</strong>, útil para probar un despliegue nuevo antes de publicarlo para todos.
-        Cuando confirmes que una URL nueva funciona, actualiza <code style="background:var(--surf2);padding:.1rem .35rem;border-radius:4px">DEFAULT_GAS_URL</code> en el código y vuelve a publicar el HTML — así todos los docentes quedan conectados sin tocar nada.
-      </p>
-      <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
-        <input type="text" id="gas-url-input" style="flex:1;min-width:280px" placeholder="https://script.google.com/macros/s/AKfycb.../exec">
-        <button class="btn sm grn" onclick="saveGasUrl()">💾 Guardar y probar</button>
-        <button class="btn sm out" onclick="clearGasUrl()">🗑 Borrar</button>
-      </div>
-      <div id="gas-url-status" style="font-size:.8rem;margin-top:.7rem;min-height:1.2rem;white-space:pre-wrap;line-height:1.6"></div>
-
-      <div style="margin-top:1.1rem;border-top:1px solid var(--bord);padding-top:1rem">
-        <div style="font-size:.78rem;font-weight:700;color:var(--acc2);margin-bottom:.5rem">📄 Spreadsheet ID (solo si necesitas cambiarlo)</div>
-        <p style="color:var(--txt2);font-size:.8rem;margin-bottom:.7rem;line-height:1.6">
-          Si el Google Sheet actual se borró o cambió, pega aquí el ID del nuevo (la parte entre <code style="background:var(--surf2);padding:.1rem .35rem;border-radius:4px">/d/</code> y <code style="background:var(--surf2);padding:.1rem .35rem;border-radius:4px">/edit</code> en su URL). Esto actualiza el script directamente — no necesitas volver a editar código.
-        </p>
-        <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
-          <input type="text" id="sheet-id-input" style="flex:1;min-width:280px" placeholder="ID del Google Sheet">
-          <button class="btn sm pur" onclick="saveSheetId()">💾 Guardar Spreadsheet ID</button>
-        </div>
-        <div id="sheet-id-status" style="font-size:.8rem;margin-top:.7rem;min-height:1.2rem;white-space:pre-wrap;line-height:1.6"></div>
-      </div>
-    </div>
-
     <!-- Cargar JSON -->
     <div class="admin-panel">
       <h3>📥 Cargar datos desde JSON</h3>
@@ -584,6 +558,63 @@ tbody tr.new-row td{animation:rowflash .9s ease}
       <div id="admin-spaces-list"><div style="color:var(--txt2);font-size:.83rem">Cargando desde Sheets...</div></div>
       <button class="btn sm out" onclick="adminLoadSpaces()" style="margin-top:.8rem">🔄 Actualizar lista</button>
     </div>
+
+    <!-- Conexión avanzada (Firebase / Sheets) — colapsada: es solo
+         diagnóstico/reconfiguración, no un paso que el admin normal
+         necesite tocar día a día -->
+    <details class="admin-panel" style="padding:0;border-color:var(--bord)">
+      <summary style="cursor:pointer;padding:1.1rem 1.4rem;font-size:.88rem;font-weight:700;color:var(--txt2);display:flex;align-items:center;gap:.5rem">🔌 Conexión avanzada (Firebase / Sheets) <span style="font-weight:400;font-size:.78rem">— normalmente no necesitas entrar aquí</span></summary>
+      <div style="padding:0 1.4rem 1.4rem;border-top:1px solid var(--bord)">
+
+        <div style="margin-top:1.2rem">
+          <h3 style="font-size:.9rem">⚡ Sincronización en tiempo real (Firebase)</h3>
+          <p style="color:var(--txt2);font-size:.83rem;margin-bottom:1rem;line-height:1.6">
+            Este es el motor que hace que los cambios se vean al instante entre dispositivos — Google Sheets nunca fue diseñado para eso (solo "responde cuando le preguntas"; Firebase "avisa" apenas algo cambia). Se configura <strong style="color:var(--txt)">una sola vez</strong> aquí, y luego un desarrollador debe fijarla en el código (<code style="background:var(--surf2);padding:.1rem .35rem;border-radius:4px">DEFAULT_FIREBASE_CONFIG</code>) para que quede funcionando para todos los docentes automáticamente.
+          </p>
+          <ol style="color:var(--txt2);font-size:.8rem;line-height:1.9;margin:0 0 1rem 1.1rem">
+            <li>Entra a <a href="https://console.firebase.google.com" target="_blank" style="color:var(--acc2)">console.firebase.google.com</a> → Crear proyecto (gratis, sin tarjeta).</li>
+            <li>En el proyecto: <strong style="color:var(--txt)">Compilación → Realtime Database → Crear base de datos</strong> → elige una ubicación → empieza en <strong style="color:var(--txt)">modo de prueba</strong>.</li>
+            <li><strong style="color:var(--txt)">Configuración del proyecto</strong> (⚙️ arriba a la izq.) → pestaña "General" → sección "Tus apps" → ícono <strong style="color:var(--txt)">&lt;/&gt;</strong> (Web) → regístrala → copia el objeto <code style="background:var(--surf2);padding:.1rem .35rem;border-radius:4px">firebaseConfig</code> completo.</li>
+            <li>Pégalo tal cual abajo (el `{ ... }` completo) y toca "Guardar y probar".</li>
+          </ol>
+          <textarea id="firebase-config-input" rows="6" style="width:100%;font-family:ui-monospace,monospace;font-size:.78rem" placeholder='{"apiKey":"...","authDomain":"...","databaseURL":"https://TU-PROYECTO-default-rtdb.firebaseio.com","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}'></textarea>
+          <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.6rem;align-items:center">
+            <button class="btn sm grn" onclick="saveFirebaseConfigFromInput()">💾 Guardar y probar</button>
+            <button class="btn sm out" onclick="testFirebaseConnection()">📡 Probar conexión</button>
+            <button class="btn sm pur" onclick="importSheetsToFirebase()">📥 Importar datos actuales de Sheets a Firebase</button>
+          </div>
+          <div id="firebase-status" style="font-size:.8rem;margin-top:.7rem;min-height:1.2rem;white-space:pre-wrap;line-height:1.6"></div>
+        </div>
+
+        <div style="margin-top:1.6rem;border-top:1px solid var(--bord);padding-top:1.2rem">
+          <h3 style="font-size:.9rem">🔗 Respaldo en Google Sheets (Apps Script)</h3>
+          <p style="color:var(--txt2);font-size:.83rem;margin-bottom:1rem;line-height:1.6">
+            Ya NO es el mecanismo de sincronización en vivo (eso lo hace Firebase, arriba) — esto queda como respaldo legible en una hoja de cálculo, bajo demanda (botón "Sync Sheets"). La URL "de fábrica" está en el código (<code style="background:var(--surf2);padding:.1rem .35rem;border-radius:4px">DEFAULT_GAS_URL</code>).
+            Este campo solo guarda una URL alternativa <strong style="color:var(--txt)">en ESTE navegador</strong>, útil para probar un despliegue nuevo antes de publicarlo para todos.
+            Cuando confirmes que una URL nueva funciona, actualiza <code style="background:var(--surf2);padding:.1rem .35rem;border-radius:4px">DEFAULT_GAS_URL</code> en el código y vuelve a publicar el HTML — así todos los docentes quedan conectados sin tocar nada.
+          </p>
+          <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
+            <input type="text" id="gas-url-input" style="flex:1;min-width:280px" placeholder="https://script.google.com/macros/s/AKfycb.../exec">
+            <button class="btn sm grn" onclick="saveGasUrl()">💾 Guardar y probar</button>
+            <button class="btn sm out" onclick="clearGasUrl()">🗑 Borrar</button>
+          </div>
+          <div id="gas-url-status" style="font-size:.8rem;margin-top:.7rem;min-height:1.2rem;white-space:pre-wrap;line-height:1.6"></div>
+
+          <div style="margin-top:1.1rem;border-top:1px solid var(--bord);padding-top:1rem">
+            <div style="font-size:.78rem;font-weight:700;color:var(--acc2);margin-bottom:.5rem">📄 Spreadsheet ID (solo si necesitas cambiarlo)</div>
+            <p style="color:var(--txt2);font-size:.8rem;margin-bottom:.7rem;line-height:1.6">
+              Si el Google Sheet actual se borró o cambió, pega aquí el ID del nuevo (la parte entre <code style="background:var(--surf2);padding:.1rem .35rem;border-radius:4px">/d/</code> y <code style="background:var(--surf2);padding:.1rem .35rem;border-radius:4px">/edit</code> en su URL). Esto actualiza el script directamente — no necesitas volver a editar código.
+            </p>
+            <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
+              <input type="text" id="sheet-id-input" style="flex:1;min-width:280px" placeholder="ID del Google Sheet">
+              <button class="btn sm pur" onclick="saveSheetId()">💾 Guardar Spreadsheet ID</button>
+            </div>
+            <div id="sheet-id-status" style="font-size:.8rem;margin-top:.7rem;min-height:1.2rem;white-space:pre-wrap;line-height:1.6"></div>
+          </div>
+        </div>
+
+      </div>
+    </details>
 
     <!-- Diagnóstico de conexión -->
     <div class="admin-panel">
@@ -1123,7 +1154,10 @@ function idxAutoSave(){
   _idxSaveTimer=setTimeout(()=>{
     _idxCommitLocal();
     clearTimeout(window._idxPushDelay);
-    window._idxPushDelay=setTimeout(()=>idxSyncPush(true),1200);
+    window._idxPushDelay=setTimeout(()=>{
+      if(hasFirebaseConfig())_fbPush();
+      if(hasGasUrl())idxSyncPush(true);
+    },1200);
   },500);
 }
 
@@ -1225,6 +1259,202 @@ async function idxSyncPush(silent=false){
   }
 }
 function startSyncLoop(){clearInterval(_syncTimer);_syncTimer=setInterval(()=>idxSyncPush(true),90000);}
+function _hasUnsentChanges(){return idxHash()!==_lastIdxHash;}
+
+// ════════════════════════════════════════════════════════════════════
+//  FIREBASE — sincronización EN TIEMPO REAL
+//  Reemplaza el sondeo repetido a Google Sheets (que solo "responde
+//  cuando le preguntas") por una conexión persistente: el servidor
+//  EMPUJA los cambios a todos los conectados apenas ocurren, sin que
+//  nadie tenga que estar preguntando cada pocos segundos. Esto es lo
+//  que de verdad da sincronización instantánea entre dispositivos.
+//  Google Sheets/Apps Script queda como respaldo legible bajo demanda
+//  (botón "Sync Sheets" / panel Admin), ya NO en la ruta crítica.
+// ════════════════════════════════════════════════════════════════════
+const FIREBASE_CONFIG_KEY='ps_firebase_config_v1';
+// Una vez que confirmes que tu configuración de Firebase funciona,
+// puedes pegarla aquí directamente (reemplazando `null`) para que quede
+// "de fábrica" para todos los docentes, igual que DEFAULT_GAS_URL — así
+// nadie más tiene que configurarla a mano.
+const DEFAULT_FIREBASE_CONFIG=null;
+let FIREBASE_CONFIG=(function(){
+  try{
+    const s=localStorage.getItem(FIREBASE_CONFIG_KEY);
+    if(s)return JSON.parse(s);
+  }catch{}
+  return DEFAULT_FIREBASE_CONFIG;
+})();
+function hasFirebaseConfig(){return !!(FIREBASE_CONFIG&&FIREBASE_CONFIG.databaseURL);}
+
+let _fbDb=null,_fbListenerAttached=false,_fbPendingRemote=null;
+
+function _fbInit(){
+  if(!hasFirebaseConfig())return false;
+  if(_fbDb)return true;
+  try{
+    if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
+    _fbDb=firebase.database();
+    return true;
+  }catch(e){
+    console.error('[Firebase] init falló:', e);
+    _fbDb=null;
+    return false;
+  }
+}
+
+function saveFirebaseConfigFromInput(){
+  const el=document.getElementById('firebase-config-input');
+  const status=document.getElementById('firebase-status');
+  let cfg;
+  try{ cfg=JSON.parse(el.value.trim()); }
+  catch(e){ status.style.color='var(--bajo)'; status.textContent='⚠ Eso no es JSON válido. Copia el objeto firebaseConfig completo, con las llaves { }.'; return; }
+  if(!cfg.databaseURL){ status.style.color='var(--bajo)'; status.textContent='⚠ Falta "databaseURL" — asegúrate de copiar el firebaseConfig de una app tipo Web (</>), no de otra sección.'; return; }
+  FIREBASE_CONFIG=cfg;
+  localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(cfg));
+  _fbDb=null;_fbListenerAttached=false; // fuerza reinicialización con la config nueva
+  status.style.color='var(--sup)'; status.textContent='✓ Guardado. Probando conexión...';
+  testFirebaseConnection();
+}
+
+async function testFirebaseConnection(){
+  const status=document.getElementById('firebase-status');
+  if(!hasFirebaseConfig()){status.style.color='var(--bas)';status.textContent='⚠ Aún no has pegado la configuración de Firebase arriba.';return;}
+  if(!_fbInit()){status.style.color='var(--bajo)';status.textContent='⚠ No se pudo inicializar Firebase con esa configuración. Revisa que sea el firebaseConfig completo y correcto.';return;}
+  status.style.color='var(--txt2)';status.textContent='Conectando...';
+  try{
+    const snap=await _fbDb.ref('.info/connected').once('value');
+    await new Promise(r=>setTimeout(r,800));
+    const snap2=await _fbDb.ref('.info/connected').once('value');
+    const idxSnap=await _fbDb.ref('ps_index').once('value');
+    const hasData=idxSnap.exists();
+    status.style.color='var(--sup)';
+    status.textContent='✓ Conectado a Firebase correctamente.\n'+(hasData?'Ya hay datos guardados en Firebase.':'Todavía no hay datos en Firebase — usa "Importar datos actuales de Sheets a Firebase" si ya tenías información cargada.');
+    startFirebaseSync();
+  }catch(e){
+    status.style.color='var(--bajo)';
+    status.textContent='✗ No se pudo conectar: '+e.message+'\n\nRevisa: (1) que el JSON pegado sea exactamente el firebaseConfig de tu app Web, (2) que Realtime Database esté creada en tu proyecto, (3) que las reglas permitan lectura/escritura (modo de prueba está bien para empezar).';
+  }
+}
+
+// Trae del Sheet/Drive lo que YA tenías cargado (con el mecanismo viejo)
+// y lo sube a Firebase una sola vez — puente para no perder tus datos
+// existentes al migrar al nuevo motor de sincronización.
+async function importSheetsToFirebase(){
+  const status=document.getElementById('firebase-status');
+  if(!_fbInit()){status.style.color='var(--bajo)';status.textContent='⚠ Configura y guarda Firebase primero (arriba).';return;}
+  status.style.color='var(--txt2)';status.textContent='Leyendo lo que ya tienes en Sheets...';
+  const remote=await idxSyncLoad();
+  if(!remote){status.style.color='var(--bajo)';status.textContent='⚠ No se pudo leer nada desde Sheets (¿está configurada la URL de abajo?).';return;}
+  const keys=Object.keys(remote.grados||{});
+  if(!confirm('¿Importar '+keys.length+' grado(s) desde Sheets a Firebase?\n\nEsto reemplaza lo que haya en Firebase ahora mismo (si algo hay).'))return;
+  status.textContent='Subiendo a Firebase...';
+  try{
+    await _fbDb.ref('ps_index').set(remote);
+    IDX=remote;_lastIdxHash=idxHash();
+    status.style.color='var(--sup)';status.textContent='✓ Importado: '+keys.length+' grado(s). Ya está en Firebase y sincronizando en tiempo real.';
+    toast('Datos importados a Firebase correctamente.','ok',4000);
+  }catch(e){
+    status.style.color='var(--bajo)';status.textContent='✗ Falló la subida a Firebase: '+e.message;
+  }
+}
+
+// ¿Es seguro pisar la pantalla ahora mismo con datos nuevos?
+function _safeToRefresh(){
+  if(_hasUnsentChanges())return false;
+  if(document.querySelector('.modal-bg.on'))return false;
+  const ae=document.activeElement;
+  if(ae&&ae.tagName==='INPUT'&&ae.classList.contains('ni'))return false;
+  return true;
+}
+
+// Reconstruye la pantalla visible con los datos recién llegados, sin
+// perder en qué grado/semestre/curso estaba el docente/admin.
+function _refreshCurrentScreen(){
+  const onId=id=>document.getElementById(id)?.classList.contains('on');
+  if(CURRENT_ROLE==='docente'&&ST&&ST.grado){
+    const k=Object.keys(IDX.grados).find(kk=>{
+      const sp=IDX.grados[kk];
+      return sp.grado===ST.grado&&sp.year===ST.year;
+    });
+    const sp=k&&IDX.grados[k];
+    if(sp){
+      const keepSem=ST.activeSem,keepCourse=ST.activeCourse;
+      _loadSpaceIntoST(sp);
+      if(sp.sems.includes(keepSem))ST.activeSem=keepSem;
+      if(keepCourse&&sp.data[ST.activeSem]?.[keepCourse])ST.activeCourse=keepCourse;
+    }
+  }
+  if(onId('s-entry'))buildEntry();
+  else if(onId('s-analysis'))buildAnalysis();
+  else if(onId('s-admin'))adminLoadSpaces();
+}
+
+// Aplica datos que llegaron de Firebase (en vivo o al conectar) a la
+// pantalla, conservando en qué grado/semestre/curso estabas.
+function _fbApplyRemote(remote){
+  if(!remote||!remote.grados)return;
+  IDX=remote;
+  _lastIdxHash=idxHash();
+  _refreshCurrentScreen();
+  const t=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+  syncBadge('ok','Firebase ✓ '+t);
+}
+
+// Arranca (o reutiliza) la conexión en vivo.
+function startFirebaseSync(){
+  if(!_fbInit()){
+    syncBadge('off','Firebase sin configurar');
+    return;
+  }
+  if(_fbListenerAttached)return;
+  _fbListenerAttached=true;
+
+  _fbDb.ref('.info/connected').on('value',snap=>{
+    if(snap.val()===true){
+      if(_fbPendingRemote&&_safeToRefresh()){ _fbApplyRemote(_fbPendingRemote); _fbPendingRemote=null; }
+      else syncBadge('ok','Firebase ✓ en vivo');
+    }else{
+      syncBadge('off','Reconectando...');
+    }
+  });
+
+  _fbDb.ref('ps_index').on('value',snap=>{
+    const remote=snap.val();
+    if(!remote||!remote.grados)return;
+    if(_safeToRefresh()){
+      _fbApplyRemote(remote);
+    }else{
+      // Llegó un cambio mientras no era seguro aplicarlo (estás
+      // escribiendo, hay un modal abierto, etc.) — se guarda y se
+      // aplica apenas se libere, en vez de perderlo o pisar lo que
+      // estás escribiendo.
+      _fbPendingRemote=remote;
+    }
+  },err=>{
+    console.error('[Firebase] error de escucha:', err);
+    syncBadge('err','Firebase: '+err.message);
+  });
+}
+
+// Envía IDX completo a Firebase — esto es lo que hace que los demás
+// dispositivos, que están ESCUCHANDO (no preguntando), lo reciban al
+// instante. Se llama automáticamente tras cada edición.
+async function _fbPush(){
+  if(!_fbInit()){syncBadge('off','Firebase sin configurar');return;}
+  const h=idxHash();
+  if(h===_lastIdxHash)return;
+  syncBadge('syncing','Guardando...');
+  try{
+    await _fbDb.ref('ps_index').set(IDX);
+    _lastIdxHash=h;
+    const t=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+    syncBadge('ok','Firebase ✓ '+t);
+  }catch(e){
+    console.error('[Firebase] push falló:', e);
+    toast('⚠ No se guardó en Firebase: '+e.message,'err',7000);
+    syncBadge('err','Error al guardar');
+  }
+}
 
 // ════════════════════════════════════════════════════════════════════
 //  NAV
@@ -2432,14 +2662,25 @@ async function init(){
   loadTheme();
   selectRole('admin');
 
-  if(!hasGasUrl()){
-    syncBadge('off','Sin configurar');
-    toast('Configura la URL del Web App en el Panel de Administración para sincronizar con Sheets.','info',6000);
-  }else{
-    // Cargar índice desde Sheets de fondo (no bloquea el login)
-    syncBadge('off','Sheets');
+  if(hasFirebaseConfig()){
+    syncBadge('off','Conectando a Firebase...');
+    startFirebaseSync();
+    // Da un instante a Firebase para traer el primer valor (si además hay
+    // Sheets configurado, se usa como respaldo por si Firebase aún no
+    // tiene nada).
+    await new Promise(r=>setTimeout(r,600));
+  }
+  if((!IDX.grados||!Object.keys(IDX.grados).length)&&hasGasUrl()){
+    syncBadge('off','Sheets (respaldo)');
     const remote=await idxSyncLoad();
-    if(remote){IDX=remote;}
+    if(remote){
+      IDX=remote;
+      // Si Firebase está configurado pero todavía no tenía datos, se
+      // aprovecha para sembrarlo con lo que había en Sheets.
+      if(hasFirebaseConfig()&&_fbDb){
+        try{ const snap=await _fbDb.ref('ps_index').once('value'); if(!snap.exists())await _fbDb.ref('ps_index').set(remote); }catch{}
+      }
+    }
   }
   if(!IDX.grados||!Object.keys(IDX.grados).length){
     try{
@@ -2447,13 +2688,17 @@ async function init(){
       if(local&&local.grados)IDX=local;
     }catch{}
   }
+  if(!hasFirebaseConfig())syncBadge('off','Firebase sin configurar');
 
+  // Sheets queda como respaldo periódico de baja frecuencia (ya no es
+  // crítico para que la sincronización funcione — eso lo hace Firebase).
   startSyncLoop();
   window.addEventListener('online',()=>{
     _syncEnabled=true;_syncErrors=0;
+    if(hasFirebaseConfig())startFirebaseSync();
     if(hasGasUrl()){syncBadge('syncing','Reconectando...');idxSyncPush(false);}
   });
-  window.addEventListener('offline',()=>syncBadge('off','Sin internet'));
+  window.addEventListener('offline',()=>{ if(!hasFirebaseConfig())syncBadge('off','Sin internet'); });
 
   setTimeout(()=>{const u=document.getElementById('login-user');if(u)u.focus();},100);
 }
