@@ -1527,14 +1527,24 @@ function _docenteVisibleKeys(){
 }
 
 async function _docenteEnter(){
-  // 1. Cargar índice institucional (Sheets primero, luego local)
-  const remote=await idxSyncLoad();
-  if(remote){IDX=remote;_idxDirty=false;}
-  else{
-    try{
-      const local=JSON.parse(localStorage.getItem(IDX_LOCAL_KEY));
-      if(local&&local.grados){IDX=local;toast('Mostrando datos locales (sin conexión a Sheets).','info',3000);}
-    }catch{}
+  // 1. IDX ya debería estar poblado por Firebase (conectado en tiempo
+  // real desde init()). Solo se consulta Sheets aquí si de verdad no
+  // hay nada todavía — para no pisar datos ya actualizados en vivo con
+  // una copia de respaldo posiblemente más vieja.
+  if(!IDX.grados||!Object.keys(IDX.grados).length){
+    if(_fbPendingRemote){
+      _fbApplyRemote(_fbPendingRemote);
+      _fbPendingRemote=null;
+    }else{
+      const remote=await idxSyncLoad();
+      if(remote){IDX=remote;_idxDirty=false;}
+      else{
+        try{
+          const local=JSON.parse(localStorage.getItem(IDX_LOCAL_KEY));
+          if(local&&local.grados){IDX=local;toast('Mostrando datos locales (sin conexión a Sheets).','info',3000);}
+        }catch{}
+      }
+    }
   }
 
   const keys=_docenteVisibleKeys();
@@ -2783,15 +2793,25 @@ async function init(){
     // tiene nada).
     await new Promise(r=>setTimeout(r,600));
   }
-  if((!IDX.grados||!Object.keys(IDX.grados).length)&&hasGasUrl()){
-    syncBadge('off','Sheets (respaldo)');
-    const remote=await idxSyncLoad();
-    if(remote){
-      IDX=remote;
-      // Si Firebase está configurado pero todavía no tenía datos, se
-      // aprovecha para sembrarlo con lo que había en Sheets.
-      if(hasFirebaseConfig()&&_fbDb){
-        try{ const snap=await _fbDb.ref('ps_index').once('value'); if(!snap.exists())await _fbDb.ref('ps_index').set(remote); }catch{}
+  if(!IDX.grados||!Object.keys(IDX.grados).length){
+    // Si Firebase ya trajo un dato pero quedó pospuesto (por ejemplo,
+    // porque llegó mientras la pantalla de login seguía abierta), ese
+    // dato es más confiable que el respaldo de Sheets — se aplica antes
+    // de recurrir a Sheets, para no pisar datos en vivo con un respaldo
+    // potencialmente desactualizado.
+    if(_fbPendingRemote){
+      _fbApplyRemote(_fbPendingRemote);
+      _fbPendingRemote=null;
+    }else if(hasGasUrl()){
+      syncBadge('off','Sheets (respaldo)');
+      const remote=await idxSyncLoad();
+      if(remote){
+        IDX=remote;
+        // Si Firebase está configurado pero todavía no tenía datos, se
+        // aprovecha para sembrarlo con lo que había en Sheets.
+        if(hasFirebaseConfig()&&_fbDb){
+          try{ const snap=await _fbDb.ref('ps_index').once('value'); if(!snap.exists())await _fbDb.ref('ps_index').set(remote); }catch{}
+        }
       }
     }
   }
@@ -2806,6 +2826,19 @@ async function init(){
   // Sheets queda como respaldo periódico de baja frecuencia (ya no es
   // crítico para que la sincronización funcione — eso lo hace Firebase).
   startSyncLoop();
+  // Reintenta aplicar un cambio de Firebase pospuesto (por ejemplo, por
+  // llegar mientras había un modal abierto) al recuperar el foco de la
+  // ventana — de lo contrario ese dato quedaría perdido indefinidamente.
+  function _onRegainFocus(){
+    if(_fbPendingRemote&&_safeToRefresh()){
+      _fbApplyRemote(_fbPendingRemote);
+      _fbPendingRemote=null;
+    }
+  }
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='visible')_onRegainFocus();
+  });
+  window.addEventListener('focus',_onRegainFocus);
   window.addEventListener('online',()=>{
     _syncEnabled=true;_syncErrors=0;
     if(hasFirebaseConfig())startFirebaseSync();
