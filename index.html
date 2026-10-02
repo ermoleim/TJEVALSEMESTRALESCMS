@@ -336,6 +336,12 @@ tbody tr.new-row td{animation:rowflash .9s ease}
 /* Bloque institucional fijo (docente) */
 .inst-banner{background:linear-gradient(135deg,rgba(108,99,255,.1),rgba(56,189,248,.06));border:1px solid rgba(108,99,255,.25);border-radius:10px;padding:.7rem 1rem;margin-bottom:1rem;font-size:.8rem;color:var(--txt2);display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
 .inst-banner strong{color:var(--txt)}
+.ai-list{display:flex;flex-direction:column;gap:.65rem;padding-top:.2rem}
+.ai-row{display:flex;align-items:center;gap:.6rem}
+.ai-label{width:96px;flex-shrink:0;font-size:.7rem;font-weight:700;color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ai-track{flex:1;height:18px;background:var(--surf2);border-radius:9px;overflow:hidden}
+.ai-fill{height:100%;border-radius:9px;transition:width .5s ease}
+.ai-val{width:38px;flex-shrink:0;text-align:right;font-size:.8rem;font-weight:800}
 /* ── ESTUDIANTES CON APOYO ── */
 .ap-filters{display:flex;gap:.7rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem;background:var(--surf);border:1px solid var(--bord);border-radius:10px;padding:.7rem 1rem}
 .ap-filters .fld{display:flex;flex-direction:column;gap:.2rem}
@@ -2184,7 +2190,7 @@ function tabResumen(b){
   <div class="cgrid">
     <div class="cc full"><div class="ct">Distribución por Asignatura y Competencia</div>${buildSbar(agg)}</div>
     <div class="cc"><div class="ct">Distribución General</div>${buildDonut(B,Ba,A,S)}</div>
-    <div class="cc"><div class="ct">Índice por área (0–100)</div><canvas id="rc" width="300" height="265"></canvas></div>
+    <div class="cc"><div class="ct">Índice por área (0–100)</div><div id="rc" class="ai-list"></div></div>
   </div>
   <div class="section-hd">Por curso</div>
   <div class="cgrid">
@@ -2193,7 +2199,7 @@ function tabResumen(b){
       return`<div class="cc"><div class="ct">Curso ${c} <span style="color:var(--txt2);font-weight:400;font-size:.73rem">${SEM_LABEL[sem]} · ${arr.length} est.</span></div>${buildSbar(aggAll(arr),true)}</div>`;
     })).join('')}
   </div></div>`;
-  setTimeout(()=>renderRadar('rc',agg),80);
+  setTimeout(()=>renderAreaIndex('rc',agg),80);
 }
 
 function tabSem(b,sem){
@@ -2222,7 +2228,7 @@ function tabSem(b,sem){
   <div class="cgrid">
     <div class="cc full"><div class="ct">Distribución por Competencia — ${lbl}</div>${buildSbar(agg)}</div>
     <div class="cc"><div class="ct">Distribución General</div>${buildDonut(B,Ba,A,S)}</div>
-    <div class="cc"><div class="ct">Índice por área</div><canvas id="rc-${sem}" width="300" height="265"></canvas></div>
+    <div class="cc"><div class="ct">Índice por área</div><div id="rc-${sem}" class="ai-list"></div></div>
   </div>
   <div class="section-hd">Análisis por Asignatura — ${lbl}</div>`;
   AREAS.forEach(a=>{
@@ -2254,7 +2260,7 @@ function tabSem(b,sem){
       </div></div>`;
   });
   html+='</div>';b.innerHTML=html;
-  setTimeout(()=>renderRadar('rc-'+sem,agg),80);
+  setTimeout(()=>renderAreaIndex('rc-'+sem,agg),80);
 }
 
 function tabCmp(b){
@@ -2496,24 +2502,20 @@ function buildDonut(B,Ba,A,S){
   <div class="dleg">${segs.map(s=>`<div class="dr"><div class="dd" style="background:${s.c}"></div><span>${s.l}</span><span class="dp">${s.v} (${(s.v/T*100).toFixed(1)}%)</span></div>`).join('')}</div></div>`;
 }
 function legHTML(){return`<div class="leg">${[['var(--bajo)','Bajo'],['var(--bas)','Básico'],['var(--alto)','Alto'],['var(--sup)','Superior']].map(([c,l])=>`<div class="li"><div class="ls2" style="background:${c}"></div>${l}</div>`).join('')}</div>`;}
-function renderRadar(id,agg){
-  const canvas=document.getElementById(id);if(!canvas)return;
-  const dpr=window.devicePixelRatio||1;const lW=300,lH=265;
-  canvas.width=lW*dpr;canvas.height=lH*dpr;canvas.style.width=lW+'px';canvas.style.height=lH+'px';
-  const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
-  const labels=AREAS.map(a=>a.short);
-  const scores=AREAS.map(a=>{let num=0,den=0;[a.c1,a.c2].forEach(k=>{const st=agg[k]||{BAJO:0,BÁSICO:0,ALTO:0,SUPERIOR:0};const t=tot(st);num+=(st.BÁSICO+st.ALTO*2+st.SUPERIOR*3);den+=t*3;});return den>0?num/den*100:0;});
-  const W=lW,H=lH,cx=W/2,cy=H/2,maxR=Math.min(cx,cy)-32,n=labels.length;
-  ctx.clearRect(0,0,W,H);
-  ctx.strokeStyle='#2e3350';ctx.lineWidth=1;
-  [.25,.5,.75,1].forEach(t=>{ctx.beginPath();for(let i=0;i<n;i++){const a=(i/n)*2*Math.PI-Math.PI/2;i===0?ctx.moveTo(cx+Math.cos(a)*maxR*t,cy+Math.sin(a)*maxR*t):ctx.lineTo(cx+Math.cos(a)*maxR*t,cy+Math.sin(a)*maxR*t);}ctx.closePath();ctx.stroke();});
-  for(let i=0;i<n;i++){const a=(i/n)*2*Math.PI-Math.PI/2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(a)*maxR,cy+Math.sin(a)*maxR);ctx.stroke();}
-  ctx.beginPath();scores.forEach((s,i)=>{const a=(i/n)*2*Math.PI-Math.PI/2,rr=s/100*maxR;i===0?ctx.moveTo(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr):ctx.lineTo(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr);});
-  ctx.closePath();ctx.fillStyle='rgba(108,99,255,.22)';ctx.fill();ctx.strokeStyle='#6c63ff';ctx.lineWidth=2;ctx.stroke();
-  ctx.fillStyle='#8892b0';ctx.font='11px system-ui';ctx.textAlign='center';
-  labels.forEach((l,i)=>{const a=(i/n)*2*Math.PI-Math.PI/2;ctx.fillText(l,cx+Math.cos(a)*(maxR+22),cy+Math.sin(a)*(maxR+22)+4);});
-  ctx.fillStyle='#6c63ff';ctx.font='bold 9px system-ui';
-  scores.forEach((s,i)=>{const a=(i/n)*2*Math.PI-Math.PI/2,rr=s/100*maxR;ctx.fillText(s.toFixed(0)+'%',cx+Math.cos(a)*rr,cy+Math.sin(a)*rr-4);});
+function renderAreaIndex(id,agg){
+  const el=document.getElementById(id);if(!el)return;
+  const items=AREAS.map(a=>{
+    let num=0,den=0;
+    [a.c1,a.c2].forEach(k=>{const st=agg[k]||{BAJO:0,BÁSICO:0,ALTO:0,SUPERIOR:0};const t=tot(st);num+=(st.BÁSICO+st.ALTO*2+st.SUPERIOR*3);den+=t*3;});
+    return{label:a.label,score:den>0?num/den*100:0};
+  }).sort((x,y)=>y.score-x.score);
+  const colorFor=s=>s>=80?'var(--sup)':s>=60?'var(--alto)':s>=40?'var(--bas)':'var(--bajo)';
+  el.innerHTML=items.map(it=>`
+    <div class="ai-row" title="${it.label}: ${it.score.toFixed(1)}%">
+      <div class="ai-label">${it.label}</div>
+      <div class="ai-track"><div class="ai-fill" style="width:${it.score.toFixed(1)}%;background:${colorFor(it.score)}"></div></div>
+      <div class="ai-val" style="color:${colorFor(it.score)}">${it.score.toFixed(0)}%</div>
+    </div>`).join('');
 }
 
 // ════════════════════════════════════════════════════════════════════
