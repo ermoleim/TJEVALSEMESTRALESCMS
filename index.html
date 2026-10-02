@@ -308,8 +308,8 @@ tbody tr.new-row td{animation:rowflash .9s ease}
 .xl-sheet-row{background:var(--surf2);border:1px solid var(--bord);border-radius:8px;padding:.5rem .85rem;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-bottom:.3rem}
 
 @media print{
-  #s-login,.topbar,.anav,.sidebar,.etop,.xbar,.btn,.screen:not(#s-analysis){display:none!important}
-  #s-analysis{display:block!important}
+  #s-login,.topbar,.anav,.sidebar,.etop,.xbar,.btn,.no-print,.screen:not(#s-analysis):not(#s-apoyo){display:none!important}
+  #s-analysis.on,#s-apoyo.on{display:block!important}
   .abody{padding:0}
   .ata{border:1px solid #ccc!important;background:#fff!important;color:#000!important;min-height:60px}
 }
@@ -336,6 +336,18 @@ tbody tr.new-row td{animation:rowflash .9s ease}
 /* Bloque institucional fijo (docente) */
 .inst-banner{background:linear-gradient(135deg,rgba(108,99,255,.1),rgba(56,189,248,.06));border:1px solid rgba(108,99,255,.25);border-radius:10px;padding:.7rem 1rem;margin-bottom:1rem;font-size:.8rem;color:var(--txt2);display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
 .inst-banner strong{color:var(--txt)}
+/* ── ESTUDIANTES CON APOYO ── */
+.ap-filters{display:flex;gap:.7rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem;background:var(--surf);border:1px solid var(--bord);border-radius:10px;padding:.7rem 1rem}
+.ap-filters .fld{display:flex;flex-direction:column;gap:.2rem}
+.ap-note{font-size:.76rem;color:var(--txt2);line-height:1.6;background:var(--surf2);border:1px solid var(--bord);border-radius:8px;padding:.6rem .85rem;margin-bottom:.9rem}
+.ap-semtabs{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.9rem}
+.ap-chip{padding:.3rem .8rem;border-radius:20px;border:1.5px solid var(--bord);background:transparent;color:var(--txt2);font-size:.78rem;font-weight:600;cursor:pointer;font-family:var(--font)}
+.ap-chip.on{background:var(--acc2);border-color:var(--acc2);color:#111}
+.ap-up{color:var(--sup);font-weight:800}.ap-dn{color:var(--bajo);font-weight:800}.ap-eq{color:var(--txt2)}
+.ap-cmp .sbl{width:150px}
+.ap-two{display:flex;flex-direction:column;gap:3px;flex:1}
+.ap-two .sbt{height:12px}
+.ap-tag{font-size:.62rem;color:var(--txt2);width:46px;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -349,6 +361,7 @@ tbody tr.new-row td{animation:rowflash .9s ease}
     <div class="role-tabs">
       <button class="role-tab on" id="rtab-admin"   onclick="selectRole('admin')">👑 Administrador</button>
       <button class="role-tab"    id="rtab-docente" onclick="selectRole('docente')">📚 Docente</button>
+      <button class="role-tab"    id="rtab-apoyo" onclick="selectRole('apoyo')">🧩 Apoyo</button>
     </div>
     <div class="login-field">
       <input type="text" id="login-user" placeholder="Usuario administrador" autocomplete="username"
@@ -391,6 +404,12 @@ tbody tr.new-row td{animation:rowflash .9s ease}
         <input type="password" id="new-teacher-pwd" style="width:100%;margin-bottom:.4rem" placeholder="Contraseña para todos los docentes">
         <button class="btn sm sky" onclick="saveTeacherPwd()" style="width:100%">💾 Guardar contraseña docentes</button>
       </div>
+      <div style="margin-top:.9rem;border-top:1px solid var(--bord);padding-top:.8rem">
+        <div class="pwd-panel-title">🧩 Contraseña de Apoyo</div>
+        <label class="lbl">Nueva contraseña Apoyo</label>
+        <input type="password" id="new-apoyo-pwd" style="width:100%;margin-bottom:.4rem" placeholder="Contraseña del equipo de Apoyo">
+        <button class="btn sm sky" onclick="saveApoyoPwd()" style="width:100%">💾 Guardar contraseña Apoyo</button>
+      </div>
     </div>
     <div class="login-author">elaborado por Ermoleim Bernal S.</div>
   </div>
@@ -418,6 +437,7 @@ tbody tr.new-row td{animation:rowflash .9s ease}
     <span class="sync-badge off" id="sync-badge">⚪ Sheets</span>
     <span class="role-badge" id="role-badge" style="display:none">—</span>
     <button class="btn sm out" id="btn-home" onclick="goHome()">Inicio</button>
+    <button class="btn sm pur" id="btn-apoyo" onclick="goApoyo()" title="Estudiantes con apoyo (Inclusión)" style="display:none">🧩 Estudiantes con apoyo</button>
     <button class="btn sm out" id="btn-admin-panel" onclick="goAdmin()" title="Panel Administrador" style="display:none">⚙️ Admin</button>
     <button class="btn sm out" id="btn-pwd-panel" onclick="showPwdPanel()" title="Cambiar credenciales" style="padding:.35rem .6rem;display:none">🔐</button>
     <button class="btn sm red" onclick="logout()" title="Cerrar sesión" style="padding:.35rem .6rem">🚪</button>
@@ -441,6 +461,7 @@ tbody tr.new-row td{animation:rowflash .9s ease}
     <div class="hcard" style="--cc:var(--sup)"  onclick="goAdmin()"><div class="ic">📤</div><h3>Extraer y copiar a Sheets</h3><p>Publica los datos para que todos los docentes los vean automáticamente.</p></div>
     <div class="hcard" style="--cc:var(--bas)"  onclick="goAdmin()"><div class="ic">📦</div><h3>Descarga consolidada</h3><p>Exporta todos los grados juntos, por semestre o anual.</p></div>
     <div class="hcard" style="--cc:var(--bajo)" onclick="goAdmin()"><div class="ic">🧹</div><h3>Reiniciar para nuevo año</h3><p>Vacía los desempeños conservando la estructura para reutilizar.</p></div>
+    <div class="hcard" style="--cc:#7c3aed" onclick="goApoyo()"><div class="ic">🧩</div><h3>Estudiantes con apoyo (Inclusión)</h3><p>Marca estudiantes con necesidades educativas, consulta sus desempeños y elabora el análisis aparte.</p></div>
     <div class="hcard" style="--cc:var(--acc)"  onclick="showColab()"><div class="ic">☁️</div><h3>Sincronización Sheets</h3><p>Datos en la nube. Los docentes trabajan en tiempo real, sin duplicar.</p></div>
   </div>
   <div class="info-box" style="margin-left:1.8rem;margin-right:1.8rem">
@@ -832,6 +853,12 @@ tbody tr.new-row td{animation:rowflash .9s ease}
   </div>
 </div>
 
+<!-- ESTUDIANTES CON APOYO (Inclusión) -->
+<div id="s-apoyo" class="screen">
+  <div class="anav" id="apoyo-nav"></div>
+  <div class="abody" id="apoyo-body"></div>
+</div>
+
 <!-- ANALYSIS SCREEN -->
 <div id="s-analysis" class="screen">
   <div class="anav" id="anav"></div>
@@ -927,6 +954,11 @@ function getTeacherPwd(){
 // ════════════════════════════════════════════════════════════════════
 //  CONFIGURACIÓN DE URL DE APPS SCRIPT (editable desde el panel Admin)
 // ════════════════════════════════════════════════════════════════════
+const APOYO_PWD_DEFAULT='apoyo2026';
+const APOYO_AUTH_KEY='ps_apoyo_auth_v11';
+function getApoyoPwd(){
+  try{return localStorage.getItem(APOYO_AUTH_KEY)||APOYO_PWD_DEFAULT;}catch{return APOYO_PWD_DEFAULT;}
+}
 function hasGasUrl(){return !!GAS_URL;}
 
 function saveGasUrl(){
@@ -1001,7 +1033,8 @@ function selectRole(role){
   _loginRole=role;
   document.getElementById('rtab-admin').classList.toggle('on',role==='admin');
   document.getElementById('rtab-docente').classList.toggle('on',role==='docente');
-  document.getElementById('login-user').placeholder = role==='docente' ? 'Tu nombre (ej: GARCIA JUAN)' : 'Usuario administrador';
+  document.getElementById('rtab-apoyo').classList.toggle('on',role==='apoyo');
+  document.getElementById('login-user').placeholder = role==='docente' ? 'Tu nombre (ej: GARCIA JUAN)' : role==='apoyo' ? 'Tu nombre (docente de apoyo)' : 'Usuario administrador';
   document.getElementById('login-jornada-field').style.display = role==='docente' ? '' : 'none';
   document.getElementById('login-seccion-field').style.display = role==='docente' ? '' : 'none';
 }
@@ -1019,6 +1052,14 @@ function doLogin(){
       err.textContent='⚠ Credenciales de administrador incorrectas.';
       document.getElementById('login-pwd').value='';document.getElementById('login-pwd').focus();
     }
+  }else if(_loginRole==='apoyo'){
+    if(!u||u.length<3){err.textContent='⚠ Ingresa tu nombre completo.';return;}
+    if(p!==getApoyoPwd()){
+      err.textContent='⚠ Contraseña de Apoyo incorrecta.';
+      document.getElementById('login-pwd').value='';document.getElementById('login-pwd').focus();
+      return;
+    }
+    CURRENT_ROLE='apoyo';CURRENT_USER=u.toUpperCase();_afterLogin();
   }else{
     if(!u||u.length<3){err.textContent='⚠ Ingresa tu nombre completo.';return;}
     if(p!==getTeacherPwd()){
@@ -1041,17 +1082,20 @@ async function _afterLogin(){
   if(badge){
     badge.style.display='inline-flex';
     const jsTag=(CURRENT_ROLE==='docente'&&DOC_JORNADA&&DOC_SECCION)?` (${JORNADA_LABEL[DOC_JORNADA]}/${SECCION_LABEL[DOC_SECCION]})`:'';
-    badge.textContent=CURRENT_ROLE==='admin'?'👑 Admin':'📚 '+CURRENT_USER+jsTag;
+    badge.textContent=CURRENT_ROLE==='admin'?'👑 Admin':CURRENT_ROLE==='apoyo'?'🧩 '+CURRENT_USER+' (Apoyo)':'📚 '+CURRENT_USER+jsTag;
     badge.className='role-badge '+(CURRENT_ROLE==='admin'?'admin':'docente');
   }
   document.getElementById('btn-admin-panel').style.display = CURRENT_ROLE==='admin'?'':'none';
   document.getElementById('btn-pwd-panel').style.display   = CURRENT_ROLE==='admin'?'':'none';
   document.getElementById('btn-home').style.display        = CURRENT_ROLE==='admin'?'':'none';
+  document.getElementById('btn-apoyo').style.display       = CURRENT_ROLE==='docente'?'none':'';
 
   toast('Bienvenido'+(CURRENT_ROLE==='admin'?' Administrador':' '+CURRENT_USER)+'!','ok');
 
   if(CURRENT_ROLE==='admin'){
     show('s-home');updateTB();
+  }else if(CURRENT_ROLE==='apoyo'){
+    await _apoyoEnter();
   }else{
     await _docenteEnter();
   }
@@ -1068,6 +1112,7 @@ function showPwdPanel(){
     document.getElementById('new-user').value=c.user;
     document.getElementById('new-pwd').value='';document.getElementById('new-pwd2').value='';
     document.getElementById('new-teacher-pwd').value='';
+    document.getElementById('new-apoyo-pwd').value='';
     document.getElementById('s-login').classList.remove('hidden');
   }
 }
@@ -1089,9 +1134,16 @@ function saveTeacherPwd(){
   localStorage.setItem(TEACHER_AUTH_KEY,p);
   toast('Contraseña de docentes actualizada. Comunícala al equipo.','ok',4000);
 }
+function saveApoyoPwd(){
+  const p=document.getElementById('new-apoyo-pwd').value;
+  if(p.length<4){toast('Contraseña mínimo 4 caracteres.','warn');return;}
+  localStorage.setItem(APOYO_AUTH_KEY,p);
+  toast('Contraseña de Apoyo actualizada. Comunícala al equipo de Apoyo.','ok',4000);
+}
 function logout(){
   if(!confirm('¿Cerrar sesión?'))return;
   CURRENT_ROLE='admin';CURRENT_USER='';DOC_JORNADA='';DOC_SECCION='';
+  INC={v:1,est:{},txt:{}};_incLoaded=false;
   document.getElementById('login-user').value='';document.getElementById('login-pwd').value='';
   document.getElementById('login-jornada').value='';document.getElementById('login-seccion').value='';
   document.getElementById('login-err').textContent='';
@@ -1405,6 +1457,10 @@ function _refreshCurrentScreen(){
   if(onId('s-entry'))buildEntry();
   else if(onId('s-analysis'))buildAnalysis();
   else if(onId('s-admin'))adminLoadSpaces();
+  else if(onId('s-apoyo')){
+    const a=document.activeElement;
+    if(!(a&&a.closest&&a.closest('#s-apoyo')&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))apoyoRender();
+  }
 }
 
 // Aplica datos que llegaron de Firebase (en vivo o al conectar) a la
@@ -2777,6 +2833,448 @@ function adminResetYear(){
   toast(`Desempeños vaciados: Grado ${GN[sp.grado]} · ${sp.year}. Estructura conservada.`,'ok',4500);
   adminLoadSpaces();
 }
+
+// ════════════════════════════════════════════════════════════════════
+//  ESTUDIANTES CON APOYO (INCLUSIÓN)
+//  - Quién marca / analiza: rol Apoyo y Admin.
+//  - Marcas y análisis de Apoyo viven en su PROPIA clave de Sheets
+//    (ps_inclusion), separada de ps_index, para que no se pisen con lo que
+//    los docentes digitan (el sync de ps_index sobrescribe el documento).
+//  - Los desempeños NO se duplican: se leen/editan directo en el registro
+//    del estudiante dentro de IDX (misma fuente que usa el docente de curso).
+//  INC = { v:1,
+//    est:{ "<claveEspacio>|<NOMBRE NORMALIZADO>": {on,cat,nota,ts} },
+//    txt:{ "<clave>": {t,ts} } }   ← gana el ts más reciente al fusionar
+// ════════════════════════════════════════════════════════════════════
+const INC_KEY='ps_inclusion', INC_LOCAL_KEY='ps_inclusion_local';
+const INC_CATS=['NEE permanente','NEE transitoria','Capacidades o talentos excepcionales','Seguimiento / en observación'];
+let INC={v:1,est:{},txt:{}};
+let _incLoaded=false,_incT=null,_incChain=Promise.resolve();
+let APOYO={tab:'sel',sub:'resumen',sem:'AMBOS',jornada:'AMBAS',grado:'TODOS',q:'',soloMarc:false,dsem:'S1',ficha:'',_list:[]};
+let _patches=[],_patchT=null;
+
+const lvScore=v=>LVL.indexOf(v);
+const LV_SHORT={BAJO:'Bj',BÁSICO:'Bá',ALTO:'Al',SUPERIOR:'Su'};
+const ALLKEYS=AREAS.flatMap(a=>[a.c1,a.c2]);
+function lvIndex(rec){
+  let n=0,sum=0;
+  ALLKEYS.forEach(k=>{const v=lvScore(rec[k]);if(v>=0){n++;sum+=v;}});
+  return n?sum/(3*n)*100:null;
+}
+function incMerge(a,b){
+  const out={v:1,est:{},txt:{}};
+  ['est','txt'].forEach(f=>{
+    const ks=new Set([...Object.keys(a?.[f]||{}),...Object.keys(b?.[f]||{})]);
+    ks.forEach(k=>{
+      const x=a?.[f]?.[k],y=b?.[f]?.[k];
+      out[f][k]=!x?y:!y?x:((y.ts||0)>(x.ts||0)?y:x);
+    });
+  });
+  return out;
+}
+async function incFetchRemote(){
+  if(!hasGasUrl())return null;
+  try{
+    const r=await fetch(GAS_URL+'?action=load&key='+encodeURIComponent(INC_KEY),{cache:'no-cache'});
+    if(!r.ok)return null;
+    const d=JSON.parse(await r.text());
+    if(d&&d.error)return null;
+    return (d&&d.est)?d:{v:1,est:{},txt:{}};
+  }catch(e){console.error('[Apoyo] GET',e);return null;}
+}
+async function incLoad(){
+  let local={v:1,est:{},txt:{}};
+  try{const l=JSON.parse(localStorage.getItem(INC_LOCAL_KEY));if(l&&l.est)local=l;}catch{}
+  const remote=await incFetchRemote();
+  INC=incMerge(local,remote||{});
+  _incLoaded=true;
+  if(remote===null&&hasGasUrl())toast('Sin conexión con Sheets: se muestran las marcas guardadas en este equipo.','warn',4500);
+}
+async function incPush(){
+  try{localStorage.setItem(INC_LOCAL_KEY,JSON.stringify(INC));}catch{}
+  if(!hasGasUrl())return;
+  const remote=await incFetchRemote();
+  if(remote===null){apoyoStatus('off','Sin conexión · guardado local');return;}
+  INC=incMerge(INC,remote);
+  try{localStorage.setItem(INC_LOCAL_KEY,JSON.stringify(INC));}catch{}
+  try{
+    const res=await fetch(GAS_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},redirect:'follow',body:JSON.stringify({key:INC_KEY,data:INC})});
+    const d=JSON.parse(await res.text());
+    if(!d.ok)throw new Error(d.error||'Error del servidor');
+    apoyoStatus('ok','Guardado en Sheets '+new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}));
+  }catch(e){console.error('[Apoyo] POST',e);apoyoStatus('err','No se pudo guardar en Sheets');}
+}
+function apoyoStatus(state,msg){
+  const el=document.getElementById('apoyo-status');if(!el)return;
+  el.className='sync-badge '+state;
+  el.textContent=({ok:'🟢',off:'⚪',err:'🔴',syncing:'🔄'}[state]||'⚪')+' '+msg;
+}
+function incDirty(){
+  try{localStorage.setItem(INC_LOCAL_KEY,JSON.stringify(INC));}catch{}
+  apoyoStatus('syncing','Guardando...');
+  clearTimeout(_incT);
+  _incT=setTimeout(()=>{_incChain=_incChain.then(incPush);},1200);
+}
+function incSet(k,patch){
+  INC.est[k]={...(INC.est[k]||{on:false,cat:'',nota:''}),...patch,ts:Date.now()};
+  incDirty();
+}
+function incSetTxt(k,t){INC.txt[k]={t,ts:Date.now()};incDirty();}
+const incTxt=k=>INC.txt[k]?.t||'';
+
+// ── Roster ─────────────────────────────────────────────────────────
+function incSpaces(){
+  return Object.entries(IDX.grados||{}).filter(([k,sp])=>
+    (APOYO.jornada==='AMBAS'||sp.jornada===APOYO.jornada)&&
+    (APOYO.grado==='TODOS'||String(sp.grado)===APOYO.grado));
+}
+function incRoster(){
+  const out=[];
+  incSpaces().forEach(([sk,sp])=>{
+    const m={};
+    (sp.sems||[]).forEach(sem=>Object.entries(sp.data?.[sem]||{}).forEach(([c,arr])=>arr.forEach(rec=>{
+      const nk=normName(rec.nombre);if(!nk)return;
+      const e=m[nk]||(m[nk]={sk,nk,nombre:rec.nombre,curso:c,jornada:sp.jornada||'',grado:sp.grado,recs:{}});
+      e.recs[sem]=rec;
+    })));
+    Object.values(m).forEach(e=>{
+      const i=INC.est[sk+'|'+e.nk];
+      e.key=sk+'|'+e.nk;e.on=!!(i&&i.on);e.cat=i?.cat||'';e.nota=i?.nota||'';
+      out.push(e);
+    });
+  });
+  return out.sort((a,b)=>a.grado-b.grado||a.jornada.localeCompare(b.jornada)||a.curso.localeCompare(b.curso)||a.nombre.localeCompare(b.nombre,'es'));
+}
+const jLbl=j=>JORNADA_LABEL[j]||'—';
+const recsOf=(list,sems)=>list.flatMap(e=>sems.map(s=>e.recs[s]).filter(Boolean));
+function semsInScope(){
+  const s=new Set();incSpaces().forEach(([k,sp])=>(sp.sems||[]).forEach(x=>s.add(x)));
+  return ['S1','S2'].filter(x=>s.has(x));
+}
+function activeSems(){return APOYO.sem==='AMBOS'?semsInScope():[APOYO.sem];}
+
+// ── Navegación ─────────────────────────────────────────────────────
+async function _apoyoEnter(){
+  // Igual que el docente: IDX ya viene en vivo de Firebase; Sheets/local solo si no hay nada
+  if(!IDX.grados||!Object.keys(IDX.grados).length){
+    if(_fbPendingRemote){_fbApplyRemote(_fbPendingRemote);_fbPendingRemote=null;}
+    else{
+      const remote=await idxSyncLoad();
+      if(remote){IDX=remote;_idxDirty=false;}
+      else{
+        try{const l=JSON.parse(localStorage.getItem(IDX_LOCAL_KEY));if(l&&l.grados){IDX=l;toast('Mostrando datos locales (sin conexión).','info',3000);}}catch{}
+      }
+    }
+  }
+  await goApoyo();
+}
+async function goApoyo(){
+  if(CURRENT_ROLE==='docente'){toast('Acceso solo para Apoyo y Administración.','warn');return;}
+  show('s-apoyo');updateTB();
+  if(!_incLoaded){
+    document.getElementById('apoyo-body').innerHTML='<div class="empty-state"><div class="es-icon">⏳</div><p>Cargando estudiantes con apoyo...</p></div>';
+    await incLoad();
+  }
+  apoyoRender();
+}
+async function apoyoRefresh(){
+  await apoyoFlush();
+  if(CURRENT_ROLE==='apoyo'&&!hasFirebaseConfig()){const r=await idxSyncLoad();if(r){IDX=r;_idxDirty=false;}}
+  await incLoad();
+  apoyoRender();
+  toast('Datos actualizados.','ok',1800);
+}
+function apoyoSet(k,v){APOYO[k]=v;if(k==='jornada'||k==='grado'){APOYO.ficha='';}apoyoRender();}
+
+// ── Render base ────────────────────────────────────────────────────
+function apoyoRender(){
+  const tabs=[['sel','✅ Seleccionar'],['des','✏️ Desempeños'],['ana','📊 Análisis']];
+  document.getElementById('apoyo-nav').innerHTML=tabs.map(([id,l])=>`<div class="anavt ${APOYO.tab===id?'on':''}" onclick="apoyoSet('tab','${id}')">${l}</div>`).join('');
+  const gr=[...new Set(Object.values(IDX.grados||{}).map(sp=>sp.grado))].sort((a,b)=>a-b);
+  const filt=`<div class="ap-filters no-print">
+    ${new Set(Object.values(IDX.grados||{}).map(sp=>sp.jornada||'')).size>1?`<div class="fld"><label class="lbl">Jornada</label><select onchange="apoyoSet('jornada',this.value)">
+      ${[['AMBAS','Ambas jornadas'],['MANANA','Mañana'],['TARDE','Tarde']].map(([v,l])=>`<option value="${v}"${APOYO.jornada===v?' selected':''}>${l}</option>`).join('')}</select></div>`:''}
+    <div class="fld"><label class="lbl">Grado</label><select onchange="apoyoSet('grado',this.value)">
+      <option value="TODOS">Todos</option>${gr.map(g=>`<option value="${g}"${APOYO.grado===String(g)?' selected':''}>${GN[g]||g}</option>`).join('')}</select></div>
+    <button class="btn sm out" onclick="apoyoRefresh()">↻ Actualizar</button>
+    <span id="apoyo-status" class="sync-badge off" style="margin-left:auto">⚪ ${_incLoaded?'Listo':'...'}</span>
+  </div>`;
+  const body=document.getElementById('apoyo-body');
+  if(!Object.keys(IDX.grados||{}).length){
+    body.innerHTML=filt+'<div class="empty-state"><div class="es-icon">📭</div><p>Aún no hay datos cargados por el administrador.</p></div>';return;
+  }
+  body.innerHTML=filt+'<div id="apoyo-content"></div>';
+  const c=document.getElementById('apoyo-content');
+  if(APOYO.tab==='sel')apoyoTabSel(c);
+  else if(APOYO.tab==='des')apoyoTabDes(c);
+  else apoyoTabAna(c);
+}
+
+// ── Pestaña 1: Seleccionar ─────────────────────────────────────────
+function apoyoTabSel(c){
+  const R=incRoster();
+  const keys=new Set(R.map(e=>e.key));
+  const sks=new Set(incSpaces().map(([k])=>k));
+  const orphans=Object.entries(INC.est).filter(([k,v])=>v.on&&sks.has(k.split('|').slice(0,-1).join('|'))&&!keys.has(k));
+  c.innerHTML=`<div class="ap-note">Marca a los estudiantes con necesidades educativas o que requieran apoyo. Solo se guarda la <strong>categoría</strong> y una <strong>nota breve</strong>; el detalle clínico y el PIAR se mantienen en Inclusión MCS. Los desempeños se registran en las mismas columnas de siempre (una sola fuente de datos).</div>
+  ${orphans.length?`<div class="aitem" style="--c:var(--bas);margin-bottom:.8rem"><div class="aiconcel">⚠️</div><div><div class="aititle">${orphans.length} marca(s) sin estudiante coincidente</div><div class="aidesc">Probablemente se cambió el nombre del estudiante en la lista del curso: ${orphans.map(([k])=>esc(k.split('|').pop())).join(' · ')}. Vuelve a marcarlo con su nombre actual.</div></div></div>`:''}
+  <div class="ap-filters" style="margin-bottom:.8rem">
+    <div class="fld" style="flex:1;min-width:200px"><label class="lbl">Buscar estudiante</label><input type="text" id="apoyo-q" placeholder="🔍 Nombre..." value="${esc(APOYO.q)}" oninput="APOYO.q=this.value;apoyoSelList()" style="width:100%"></div>
+    <label style="font-size:.8rem;display:flex;gap:.4rem;align-items:center;cursor:pointer"><input type="checkbox" ${APOYO.soloMarc?'checked':''} onchange="APOYO.soloMarc=this.checked;apoyoSelList()"> Solo marcados</label>
+    <span id="apoyo-count" class="pill nd"></span>
+  </div>
+  <div class="stwrap" style="max-height:none"><table><thead><tr><th style="width:34px"></th><th>Estudiante</th><th>Jornada · Curso</th><th>Categoría</th><th>Nota breve</th></tr></thead><tbody id="apoyo-sel-body"></tbody></table></div>
+  <div id="apoyo-sel-more" style="color:var(--txt2);font-size:.76rem;margin-top:.55rem"></div>`;
+  apoyoSelList();
+}
+function apoyoSelList(){
+  const q=normXL(APOYO.q);
+  const R=incRoster();
+  const rows=R.filter(e=>(!q||normXL(e.nombre).includes(q))&&(!APOYO.soloMarc||e.on));
+  const MAX=250,shown=rows.slice(0,MAX);
+  APOYO._list=shown;
+  const tb=document.getElementById('apoyo-sel-body');if(!tb)return;
+  tb.innerHTML=shown.length?shown.map((e,i)=>`<tr>
+    <td><input type="checkbox" ${e.on?'checked':''} onchange="apoyoToggle(${i},this.checked)"></td>
+    <td style="font-weight:500;white-space:nowrap">${esc(e.nombre)}</td>
+    <td><span class="pill nd">${jLbl(e.jornada)} · ${e.curso}</span></td>
+    <td><select ${e.on?'':'disabled'} onchange="apoyoCat(${i},this.value)"><option value="">— categoría —</option>${INC_CATS.map(x=>`<option${e.cat===x?' selected':''}>${x}</option>`).join('')}</select></td>
+    <td><input class="ni" ${e.on?'':'disabled'} value="${esc(e.nota)}" placeholder="Ej: apoyo en lectoescritura" onchange="apoyoNota(${i},this.value)"></td>
+  </tr>`).join(''):`<tr><td colspan="5"><div class="empty-state" style="padding:1.5rem"><div class="es-icon" style="font-size:1.5rem">🔍</div><p>Sin resultados.</p></div></td></tr>`;
+  const cnt=document.getElementById('apoyo-count');
+  if(cnt)cnt.textContent=`${R.filter(e=>e.on).length} con apoyo de ${R.length}`;
+  const more=document.getElementById('apoyo-sel-more');
+  if(more)more.textContent=rows.length>MAX?`Mostrando ${MAX} de ${rows.length}. Usa el buscador o filtra por jornada/grado.`:'';
+}
+function apoyoToggle(i,on){const e=APOYO._list[i];incSet(e.key,{on,cat:e.cat,nota:e.nota});apoyoSelList();}
+function apoyoCat(i,v){const e=APOYO._list[i];e.cat=v;incSet(e.key,{cat:v});}
+function apoyoNota(i,v){const e=APOYO._list[i];e.nota=v.trim();incSet(e.key,{nota:v.trim()});}
+
+// ── Pestaña 2: Desempeños (edición sobre el registro real) ─────────
+function apoyoSemChips(withBoth){
+  const sems=semsInScope();
+  const opts=[...sems.map(s=>[s,SEM_LABEL[s]])];
+  if(withBoth&&sems.length>1)opts.unshift(['AMBOS','Ambos semestres']);
+  return `<div class="ap-semtabs no-print">${opts.map(([v,l])=>`<button class="ap-chip ${(withBoth?APOYO.sem:APOYO.dsem)===v?'on':''}" onclick="apoyoSet('${withBoth?'sem':'dsem'}','${v}')">${l}</button>`).join('')}</div>`;
+}
+function apoyoTabDes(c){
+  const sems=semsInScope();
+  if(!sems.includes(APOYO.dsem))APOYO.dsem=sems[0]||'S1';
+  const sem=APOYO.dsem;
+  const F=incRoster().filter(e=>e.on);
+  APOYO._list=F;
+  const head=`<div class="ap-note">Aquí ves y digitas los desempeños de los estudiantes marcados. Los cambios se guardan en el <strong>mismo registro</strong> que usa el docente del curso: no hay doble digitación.</div>${apoyoSemChips(false)}`;
+  if(!F.length){c.innerHTML=head+'<div class="empty-state"><div class="es-icon">🧩</div><p>Aún no hay estudiantes marcados con los filtros actuales. Ve a «Seleccionar».</p></div>';return;}
+  c.innerHTML=head+`<div class="tbl-wrap" style="max-height:none"><table><thead>
+    <tr><th rowspan="2" class="ntd">#</th><th rowspan="2" style="min-width:190px">Estudiante</th><th rowspan="2">Curso</th>${AREAS.map(a=>`<th colspan="2" class="ah">${a.label.toUpperCase()}</th>`).join('')}</tr>
+    <tr>${AREAS.map(()=>'<th>C1</th><th>C2</th>').join('')}</tr></thead><tbody>
+    ${F.map((e,i)=>{
+      const rec=e.recs[sem];
+      return `<tr><td class="ntd">${i+1}</td><td style="font-weight:500;white-space:nowrap">${esc(e.nombre)}<div style="font-size:.64rem;color:var(--txt2)">${esc(e.cat||'Sin categoría')}</div></td>
+      <td><span class="pill nd">${jLbl(e.jornada)} · ${e.curso}</span></td>
+      ${ALLKEYS.map(k=>rec?`<td><select class="ls ${LCSS[rec[k]]||''}" onchange="apoyoLvl(${i},'${sem}','${k}',this)"><option value="">—</option>${LVL.map(l=>`<option value="${l}"${rec[k]===l?' selected':''}>${l[0]+l.slice(1).toLowerCase()}</option>`).join('')}</select></td>`:'<td><span class="pill nd">—</span></td>').join('')}
+      </tr>`;}).join('')}
+    </tbody></table></div>
+    <div style="color:var(--txt2);font-size:.76rem;margin-top:.55rem">${F.length} estudiante${F.length!==1?'s':''} · ${SEM_LABEL[sem]}</div>`;
+}
+function incLocate(sk,sem,nk){
+  const sp=IDX.grados?.[sk];if(!sp)return null;
+  for(const [course,arr] of Object.entries(sp.data?.[sem]||{})){
+    const idx=arr.findIndex(x=>normName(x.nombre)===nk);
+    if(idx>=0)return {course,idx,rec:arr[idx]};
+  }
+  return null;
+}
+function apoyoLvl(i,sem,k,sel){
+  const e=APOYO._list[i];const v=sel.value;
+  const loc=incLocate(e.sk,sem,e.nk);if(!loc){toast('No se encontró el registro del estudiante.','err');return;}
+  loc.rec[k]=v;sel.className='ls '+(v?LCSS[v]||'':'');
+  if(hasFirebaseConfig()&&_fbInit()){
+    // Con Firebase en vivo se escribe SOLO esa celda (no todo el índice): no pisa lo que otros digitan a la vez
+    _fbDb.ref(`ps_index/grados/${e.sk}/data/${sem}/${loc.course}/${loc.idx}/${k}`).set(v)
+      .then(()=>apoyoStatus('ok','Guardado en vivo'))
+      .catch(err=>{console.error('[Apoyo] celda',err);toast('⚠ No se guardó en Firebase: '+err.message,'err',6000);});
+    try{localStorage.setItem(IDX_LOCAL_KEY,JSON.stringify(IDX));}catch{}
+  }else if(CURRENT_ROLE==='apoyo'){
+    // Sin Firebase: solo se envía la celda cambiada sobre la versión más reciente del servidor
+    _patches.push({sk:e.sk,sem,nk:e.nk,k,val:v});
+    try{localStorage.setItem(IDX_LOCAL_KEY,JSON.stringify(IDX));}catch{}
+    clearTimeout(_patchT);_patchT=setTimeout(apoyoFlush,1500);
+    apoyoStatus('syncing','Guardando...');
+  }else{
+    idxAutoSave();
+  }
+}
+async function apoyoFlush(){
+  clearTimeout(_patchT);
+  if(!_patches.length||!hasGasUrl())return;
+  const batch=_patches.splice(0);
+  const remote=await idxSyncLoad();
+  if(!remote){
+    _patches.unshift(...batch);
+    toast('Sin conexión: los cambios quedan en este equipo y se reintentarán.','warn',4000);
+    _patchT=setTimeout(apoyoFlush,20000);return;
+  }
+  batch.forEach(p=>{
+    const sp=remote.grados?.[p.sk];if(!sp)return;
+    Object.values(sp.data?.[p.sem]||{}).forEach(arr=>arr.forEach(r=>{if(normName(r.nombre)===p.nk)r[p.k]=p.val;}));
+  });
+  IDX=remote;_lastIdxHash='';
+  await idxSyncPush(true);
+  apoyoStatus('ok','Desempeños guardados');
+}
+
+// ── Pestaña 3: Análisis (Apoyo) ───────────────────────────────
+function apoyoTabAna(c){
+  const subs=[['resumen','Resumen'],['evol','Evolución S1→S2'],['ficha','Ficha individual'],['texto','Análisis de Apoyo']];
+  const nav=`<div class="ap-semtabs no-print">${subs.map(([id,l])=>`<button class="ap-chip ${APOYO.sub===id?'on':''}" onclick="apoyoSet('sub','${id}')">${l}</button>`).join('')}
+    <button class="btn sm" style="margin-left:auto" onclick="window.print()">🖨 Imprimir</button></div>`;
+  const R=incRoster(),F=R.filter(e=>e.on);
+  if(!F.length){c.innerHTML=nav+'<div class="empty-state"><div class="es-icon">🧩</div><p>Aún no hay estudiantes marcados con los filtros actuales. Ve a «Seleccionar».</p></div>';return;}
+  c.innerHTML=nav+'<div id="apoyo-sub"></div>';
+  const b=document.getElementById('apoyo-sub');
+  if(APOYO.sub==='resumen')apoyoResumen(b,R,F);
+  else if(APOYO.sub==='evol')apoyoEvol(b,F);
+  else if(APOYO.sub==='ficha')apoyoFicha(b,F);
+  else apoyoTexto(b,F);
+}
+const pillOf=v=>v?`<span class="pill ${LCSS[v]||'nd'}">${v[0]+v.slice(1).toLowerCase()}</span>`:'<span class="pill nd">—</span>';
+const apoyoScopeLbl=()=>`${APOYO.jornada==='AMBAS'?'Ambas jornadas':jLbl(APOYO.jornada)} · ${APOYO.grado==='TODOS'?'Todos los grados':GN[APOYO.grado]}`;
+
+function apoyoResumen(b,R,F){
+  const sems=activeSems();
+  const rA=recsOf(F,sems),rR=recsOf(R.filter(e=>!e.on),sems);
+  const agg=aggAll(rA);const [B,Ba,A,S]=sumLevels(agg);const T=B+Ba+A+S||1;
+  // Por categoría
+  const cats={};F.forEach(e=>{const c=e.cat||'Sin categoría';(cats[c]=cats[c]||[]).push(e);});
+  const catRows=Object.entries(cats).map(([cat,list])=>{
+    const [b1,ba1,a1,s1]=sumLevels(aggAll(recsOf(list,sems)));const t=b1+ba1+a1+s1||1;
+    return `<tr><td style="font-weight:600">${esc(cat)}</td><td>${list.length}</td><td><span class="pill B">${(b1/t*100).toFixed(0)}%</span></td><td><span class="pill Ba">${(ba1/t*100).toFixed(0)}%</span></td><td><span class="pill A">${(a1/t*100).toFixed(0)}%</span></td><td><span class="pill S">${(s1/t*100).toFixed(0)}%</span></td></tr>`;
+  }).join('');
+  // Comparativo con el resto
+  const miniBar=st=>{const t=tot(st);return `<div class="sbt" style="flex:1">${LVL.map(l=>{const p=(st[l]/t*100);return `<div class="sbs" style="width:${p.toFixed(1)}%;background:${LCVAR[l]}" title="${l}: ${p.toFixed(1)}%">${p>12?p.toFixed(0)+'%':''}</div>`;}).join('')}</div>`;};
+  const cmp=AREAS.flatMap(a=>[a.c1,a.c2].map((k,ci)=>{
+    const sa=getSt(rA,k),sr=getSt(rR,k);
+    const hiA=(sa.ALTO+sa.SUPERIOR)/tot(sa)*100,hiR=(sr.ALTO+sr.SUPERIOR)/tot(sr)*100;
+    const d=hiA-hiR;
+    return `<div class="sbrow"><div class="sbl" title="${a.label} C${ci+1}">${a.label.substring(0,13)} C${ci+1}</div>
+      <div class="ap-two"><div style="display:flex;gap:.3rem;align-items:center"><span class="ap-tag">Apoyo</span>${miniBar(sa)}</div>
+      <div style="display:flex;gap:.3rem;align-items:center"><span class="ap-tag">Resto</span>${miniBar(sr)}</div></div>
+      <div class="sbe" style="width:70px;color:${d>=0?'var(--sup)':'var(--bajo)'}" title="Diferencia en % Alto+Superior frente al resto">${d>=0?'+':''}${d.toFixed(0)} pp</div></div>`;
+  })).join('');
+  // Mapa por estudiante
+  const heatSem=sems.length===1?sems[0]:(semsInScope().includes('S2')?'S2':'S1');
+  const heat=F.map(e=>({e,rec:e.recs[heatSem]})).filter(x=>x.rec).map(x=>({...x,ix:lvIndex(x.rec),nb:ALLKEYS.filter(k=>x.rec[k]==='BAJO').length}))
+    .sort((p,q)=>(p.ix??101)-(q.ix??101));
+  b.innerHTML=`<div style="max-width:1200px">
+    <div class="section-hd">Estudiantes con apoyo — ${apoyoScopeLbl()}</div>
+    ${apoyoSemChips(true)}
+    <div class="krow">
+      <div class="kpi" style="--c:#7c3aed"><div class="kl">Con apoyo</div><div class="kv">${F.length}</div><div class="ks">${(F.length/R.length*100).toFixed(1)}% de ${R.length} est.</div></div>
+      <div class="kpi" style="--c:var(--bajo)"><div class="kl">Nivel Bajo</div><div class="kv">${(B/T*100).toFixed(1)}%</div><div class="ks">${B} reg.</div></div>
+      <div class="kpi" style="--c:var(--bas)"><div class="kl">Nivel Básico</div><div class="kv">${(Ba/T*100).toFixed(1)}%</div><div class="ks">${Ba} reg.</div></div>
+      <div class="kpi" style="--c:var(--alto)"><div class="kl">Nivel Alto</div><div class="kv">${(A/T*100).toFixed(1)}%</div><div class="ks">${A} reg.</div></div>
+      <div class="kpi" style="--c:var(--sup)"><div class="kl">Nivel Superior</div><div class="kv">${(S/T*100).toFixed(1)}%</div><div class="ks">${S} reg.</div></div>
+      <div class="kpi" style="--c:var(--acc)"><div class="kl">Aprobación</div><div class="kv">${((Ba+A+S)/T*100).toFixed(1)}%</div><div class="ks">Bás+Alt+Sup</div></div>
+    </div>
+    <div class="cgrid">
+      <div class="cc full"><div class="ct">Distribución por Asignatura y Competencia — estudiantes con apoyo</div>${buildSbar(agg)}</div>
+      <div class="cc"><div class="ct">Distribución general</div>${buildDonut(B,Ba,A,S)}</div>
+      <div class="cc"><div class="ct">Índice por área (0–100)</div><canvas id="apoyo-rc" width="300" height="265"></canvas></div>
+    </div>
+    <div class="section-hd">Por categoría</div>
+    <div class="stwrap" style="max-height:none;margin-bottom:1.2rem"><table style="min-width:420px"><thead><tr><th>Categoría</th><th>Est.</th><th>Bajo</th><th>Básico</th><th>Alto</th><th>Superior</th></tr></thead><tbody>${catRows}</tbody></table></div>
+    <div class="cc" style="margin-bottom:1.2rem"><div class="ct">Apoyo vs. resto de los estudiantes (misma jornada y grado)</div>
+      <div class="sbar ap-cmp">${cmp}</div>${legHTML()}
+      <div style="font-size:.72rem;color:var(--txt2);margin-top:.5rem">La cifra de la derecha es la diferencia, en puntos porcentuales, del % Alto+Superior frente al resto (${R.length-F.length} estudiantes).</div></div>
+    <div class="section-hd">Mapa por estudiante — ${SEM_LABEL[heatSem]} (de menor a mayor índice)</div>
+    <div class="stwrap" style="max-height:none"><table><thead><tr><th>#</th><th>Estudiante</th><th>Curso</th><th>Categoría</th>${AREAS.map(a=>`<th>${a.short} C1</th><th>${a.short} C2</th>`).join('')}<th>Índice</th><th>Bajos</th></tr></thead><tbody>
+    ${heat.map((x,i)=>`<tr><td class="ntd">${i+1}</td><td style="font-weight:500;white-space:nowrap">${esc(x.e.nombre)}</td><td><span class="pill nd">${jLbl(x.e.jornada)} · ${x.e.curso}</span></td><td style="font-size:.7rem;color:var(--txt2)">${esc(x.e.cat||'—')}</td>
+      ${ALLKEYS.map(k=>`<td>${pillOf(x.rec[k])}</td>`).join('')}<td><strong>${x.ix==null?'—':x.ix.toFixed(0)}</strong></td><td>${x.nb>=6?'🔴 ':''}${x.nb}/10</td></tr>`).join('')||`<tr><td colspan="16"><div class="empty-state" style="padding:1rem"><p>Sin registros en este semestre.</p></div></td></tr>`}
+    </tbody></table></div>
+    <div style="font-size:.72rem;color:var(--txt2);margin-top:.5rem">Índice: Bajo=0, Básico=1, Alto=2, Superior=3, sobre las competencias digitadas (0–100). 🔴 = 6 o más competencias en Bajo.</div></div>`;
+  setTimeout(()=>renderRadar('apoyo-rc',agg),80);
+}
+
+function apoyoEvol(b,F){
+  const both=F.filter(e=>e.recs.S1&&e.recs.S2);
+  if(!both.length){b.innerHTML='<div class="empty-state"><div class="es-icon">⚖️</div><p>La evolución requiere estudiantes con registros en Primer y Segundo Semestre.</p></div>';return;}
+  let up=0,eq=0,dn=0;
+  const rows=both.map(e=>{
+    let u=0,q=0,d=0;
+    const cells=ALLKEYS.map(k=>{
+      const a=lvScore(e.recs.S1[k]),z=lvScore(e.recs.S2[k]);
+      if(a<0||z<0)return '<td><span class="pill nd">—</span></td>';
+      if(z>a){u++;return `<td><span class="ap-up" title="${e.recs.S1[k]} → ${e.recs.S2[k]}">↑</span> <span style="font-size:.64rem;color:var(--txt2)">${LV_SHORT[LVL[a]]}→${LV_SHORT[LVL[z]]}</span></td>`;}
+      if(z<a){d++;return `<td><span class="ap-dn" title="${e.recs.S1[k]} → ${e.recs.S2[k]}">↓</span> <span style="font-size:.64rem;color:var(--txt2)">${LV_SHORT[LVL[a]]}→${LV_SHORT[LVL[z]]}</span></td>`;}
+      q++;return `<td><span class="ap-eq" title="${e.recs.S2[k]}">=</span> <span style="font-size:.64rem;color:var(--txt2)">${LV_SHORT[LVL[z]]}</span></td>`;
+    }).join('');
+    up+=u;eq+=q;dn+=d;
+    const i1=lvIndex(e.recs.S1),i2=lvIndex(e.recs.S2);
+    const di=(i1==null||i2==null)?null:i2-i1;
+    return {di,html:`<tr><td style="font-weight:500;white-space:nowrap">${esc(e.nombre)}<div style="font-size:.64rem;color:var(--txt2)">${jLbl(e.jornada)} · ${e.curso}</div></td>${cells}
+      <td><span class="ap-up">${u}↑</span> <span class="ap-eq">${q}=</span> <span class="ap-dn">${d}↓</span></td>
+      <td>${di==null?'—':`<strong class="${di>0?'ap-up':di<0?'ap-dn':'ap-eq'}">${di>0?'+':''}${di.toFixed(0)}</strong>`}</td></tr>`};
+  }).sort((p,q)=>(p.di??0)-(q.di??0));
+  const T=up+eq+dn||1;
+  b.innerHTML=`<div style="max-width:1200px"><div class="section-hd">Evolución Primer → Segundo Semestre — ${apoyoScopeLbl()}</div>
+    <div class="krow">
+      <div class="kpi" style="--c:var(--sup)"><div class="kl">Mejoraron</div><div class="kv">${(up/T*100).toFixed(0)}%</div><div class="ks">${up} competencias</div></div>
+      <div class="kpi" style="--c:var(--txt2)"><div class="kl">Se mantuvieron</div><div class="kv">${(eq/T*100).toFixed(0)}%</div><div class="ks">${eq} competencias</div></div>
+      <div class="kpi" style="--c:var(--bajo)"><div class="kl">Bajaron</div><div class="kv">${(dn/T*100).toFixed(0)}%</div><div class="ks">${dn} competencias</div></div>
+      <div class="kpi" style="--c:#7c3aed"><div class="kl">Estudiantes</div><div class="kv">${both.length}</div><div class="ks">con ambos semestres</div></div>
+    </div>
+    <div class="stwrap" style="max-height:none"><table><thead><tr><th>Estudiante (de mayor descenso a mayor avance)</th>${AREAS.map(a=>`<th>${a.short} C1</th><th>${a.short} C2</th>`).join('')}<th>Resumen</th><th>Δ índice</th></tr></thead><tbody>${rows.map(r=>r.html).join('')}</tbody></table></div>
+    <div style="font-size:.72rem;color:var(--txt2);margin-top:.5rem">Bj=Bajo · Bá=Básico · Al=Alto · Su=Superior (1er Sem → 2do Sem). Δ índice = cambio en el índice 0–100.</div></div>`;
+}
+
+function apoyoFicha(b,F){
+  if(!F.find(e=>e.key===APOYO.ficha))APOYO.ficha=F[0].key;
+  const e=F.find(x=>x.key===APOYO.ficha);
+  const tk=`FICHA|${e.key}`;
+  b.innerHTML=`<div style="max-width:1100px"><div class="ap-filters no-print"><div class="fld"><label class="lbl">Estudiante</label>
+    <select style="min-width:260px">${F.map((x,i)=>`<option value="${i}"${x.key===e.key?' selected':''}>${esc(x.nombre)} — ${x.curso}</option>`).join('')}</select></div></div>
+    <div class="cc" style="margin-bottom:1rem"><div class="ct" style="font-size:1rem">${esc(e.nombre)}</div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;font-size:.78rem;color:var(--txt2);align-items:center"><span class="pill nd">${GN[e.grado]||e.grado} · ${jLbl(e.jornada)} · Curso ${e.curso}</span><span class="pill nd">${esc(e.cat||'Sin categoría')}</span>${e.nota?`<span>📝 ${esc(e.nota)}</span>`:''}</div></div>
+    <div class="cgrid">${['S1','S2'].filter(s=>e.recs[s]).map(s=>`<div class="cc"><div class="ct">${SEM_LABEL[s]} — índice ${lvIndex(e.recs[s])==null?'—':lvIndex(e.recs[s]).toFixed(0)}</div><canvas id="apoyo-f-${s}" width="300" height="265"></canvas></div>`).join('')}</div>
+    <div class="stwrap" style="max-height:none;margin-bottom:1rem"><table style="min-width:520px"><thead><tr><th>Asignatura</th><th>C1 · 1er Sem</th><th>C1 · 2do Sem</th><th>C2 · 1er Sem</th><th>C2 · 2do Sem</th></tr></thead><tbody>
+      ${AREAS.map(a=>`<tr><td style="font-weight:600">${a.label}</td><td>${pillOf(e.recs.S1?.[a.c1])}</td><td>${pillOf(e.recs.S2?.[a.c1])}</td><td>${pillOf(e.recs.S1?.[a.c2])}</td><td>${pillOf(e.recs.S2?.[a.c2])}</td></tr>`).join('')}</tbody></table></div>
+    <div class="cmpbox"><div class="abox-t" style="color:var(--acc3)">✍️ Observaciones de Apoyo — ${esc(e.nombre)}</div>
+      <div class="ata-wrapper"><textarea class="ata" id="ta_ficha" rows="6" placeholder="Fortalezas, barreras, ajustes razonables, acuerdos con familia y docentes..." oninput="incSetTxt('FICHA|'+APOYO.ficha,this.value);updCC('ta_ficha')">${esc(incTxt(tk))}</textarea><span class="char-count" id="cc_ficha">${incTxt(tk).length} car.</span></div></div></div>`;
+  // el <select> usa el índice de la lista para no meter nombres en atributos
+  b.querySelector('select').onchange=function(){APOYO.ficha=F[+this.value].key;apoyoRender();};
+  setTimeout(()=>['S1','S2'].forEach(s=>{if(e.recs[s])renderRadar('apoyo-f-'+s,aggAll([e.recs[s]]));}),80);
+}
+
+function apoyoTexto(b,F){
+  const scope=`${APOYO.jornada}|${APOYO.grado}`;
+  const sems=semsInScope();
+  const mbar=st=>{const t=tot(st);return `<div class="mbar">${LVL.map(l=>{const v=st[l]/t*100;return `<div class="mbseg" style="width:${v.toFixed(1)}%;background:${LCVAR[l]}">${v>9?v.toFixed(0)+'%':''}</div>`;}).join('')}</div>`;};
+  let n=0;
+  const box=(key,title,ph,stHtml,bare)=>{
+    const id='ap_t'+(n++);const v=incTxt(key);
+    return `<div class="abox"${bare?' style="background:transparent;border:none;padding:0"':''}><div class="abox-t">${title}</div>${stHtml||''}
+      <div class="ata-wrapper"><textarea class="ata" id="ta_${id}" rows="5" placeholder="${ph}" oninput="incSetTxt('${key}',this.value);updCC('ta_${id}')">${esc(v)}</textarea><span class="char-count" id="cc_${id}">${v.length} car.</span></div></div>`;
+  };
+  let html=`<div style="max-width:1200px"><div class="section-hd">Análisis de Apoyo — ${apoyoScopeLbl()}</div>
+    <div class="ap-note">Este análisis es independiente del que redactan los docentes de curso. Se guarda por combinación de filtros (jornada y grado): al cambiar el filtro se muestra otro análisis.</div>`;
+  AREAS.forEach(a=>{
+    html+=`<div class="apanel"><div class="apanel-hd"><div class="apanel-title">📚 ${a.label}</div></div>`;
+    sems.forEach(s=>{
+      const rs=recsOf(F,[s]);
+      html+=`<div class="a2col">${[a.c1,a.c2].map((k,ci)=>box(`${scope}|${s}_${a.key}_C${ci+1}`,`${SEM_LABEL[s]} — C${ci+1}`,`Análisis C${ci+1} ${a.label} — estudiantes con apoyo`,mbar(getSt(rs,k))+legHTML())).join('')}</div>`;
+    });
+    if(sems.length>1){
+      html+=`<div class="a2col">${[1,2].map(ci=>box(`${scope}|CMP_${a.key}_C${ci}`,`⚖️ Comparativo — C${ci}`,`Comparativo C${ci} ${a.label}...`)).join('')}</div>`;
+      html+=`<div class="cmpbox"><div class="abox-t" style="color:var(--acc3)">🏁 Análisis final — ${a.label}</div>${box(`${scope}|FINAL_${a.key}`,'Conclusión del año','Conclusión final para esta área...','',true)}</div>`;
+    }
+    html+='</div>';
+  });
+  html+='</div>';
+  b.innerHTML=html;
+}
+
+
 
 // ════════════════════════════════════════════════════════════════════
 //  INIT
