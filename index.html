@@ -2945,7 +2945,13 @@ function incRoster(){
   });
   return out.sort((a,b)=>a.grado-b.grado||a.jornada.localeCompare(b.jornada)||a.curso.localeCompare(b.curso)||a.nombre.localeCompare(b.nombre,'es'));
 }
-const jLbl=j=>JORNADA_LABEL[j]||'—';
+const _JL=(typeof JORNADA_LABEL!=='undefined')?JORNADA_LABEL:{MANANA:'Mañana',TARDE:'Tarde'};
+const jLbl=j=>_JL[j]||'—';
+const jcLbl=e=>(_JL[e.jornada]?_JL[e.jornada]+' · ':'')+e.curso;
+const multiJ=()=>new Set(Object.values(IDX.grados||{}).map(sp=>sp.jornada||'')).size>1;
+// Gráfico «índice por área»: radar (canvas) o barras según lo que tenga la plataforma
+const apoyoIdxHTML=id=>typeof renderAreaIndex==='function'?`<div id="${id}" class="ai-list"></div>`:`<canvas id="${id}" width="300" height="265"></canvas>`;
+const apoyoIdxDraw=(id,agg)=>{if(typeof renderAreaIndex==='function')renderAreaIndex(id,agg);else if(typeof renderRadar==='function')renderRadar(id,agg);};
 const recsOf=(list,sems)=>list.flatMap(e=>sems.map(s=>e.recs[s]).filter(Boolean));
 function semsInScope(){
   const s=new Set();incSpaces().forEach(([k,sp])=>(sp.sems||[]).forEach(x=>s.add(x)));
@@ -2992,7 +2998,7 @@ function apoyoRender(){
   document.getElementById('apoyo-nav').innerHTML=tabs.map(([id,l])=>`<div class="anavt ${APOYO.tab===id?'on':''}" onclick="apoyoSet('tab','${id}')">${l}</div>`).join('');
   const gr=[...new Set(Object.values(IDX.grados||{}).map(sp=>sp.grado))].sort((a,b)=>a-b);
   const filt=`<div class="ap-filters no-print">
-    ${new Set(Object.values(IDX.grados||{}).map(sp=>sp.jornada||'')).size>1?`<div class="fld"><label class="lbl">Jornada</label><select onchange="apoyoSet('jornada',this.value)">
+    ${multiJ()?`<div class="fld"><label class="lbl">Jornada</label><select onchange="apoyoSet('jornada',this.value)">
       ${[['AMBAS','Ambas jornadas'],['MANANA','Mañana'],['TARDE','Tarde']].map(([v,l])=>`<option value="${v}"${APOYO.jornada===v?' selected':''}>${l}</option>`).join('')}</select></div>`:''}
     <div class="fld"><label class="lbl">Grado</label><select onchange="apoyoSet('grado',this.value)">
       <option value="TODOS">Todos</option>${gr.map(g=>`<option value="${g}"${APOYO.grado===String(g)?' selected':''}>${GN[g]||g}</option>`).join('')}</select></div>
@@ -3037,7 +3043,7 @@ function apoyoSelList(){
   tb.innerHTML=shown.length?shown.map((e,i)=>`<tr>
     <td><input type="checkbox" ${e.on?'checked':''} onchange="apoyoToggle(${i},this.checked)"></td>
     <td style="font-weight:500;white-space:nowrap">${esc(e.nombre)}</td>
-    <td><span class="pill nd">${jLbl(e.jornada)} · ${e.curso}</span></td>
+    <td><span class="pill nd">${jcLbl(e)}</span></td>
     <td><select ${e.on?'':'disabled'} onchange="apoyoCat(${i},this.value)"><option value="">— categoría —</option>${INC_CATS.map(x=>`<option${e.cat===x?' selected':''}>${x}</option>`).join('')}</select></td>
     <td><input class="ni" ${e.on?'':'disabled'} value="${esc(e.nota)}" placeholder="Ej: apoyo en lectoescritura" onchange="apoyoNota(${i},this.value)"></td>
   </tr>`).join(''):`<tr><td colspan="5"><div class="empty-state" style="padding:1.5rem"><div class="es-icon" style="font-size:1.5rem">🔍</div><p>Sin resultados.</p></div></td></tr>`;
@@ -3071,7 +3077,7 @@ function apoyoTabDes(c){
     ${F.map((e,i)=>{
       const rec=e.recs[sem];
       return `<tr><td class="ntd">${i+1}</td><td style="font-weight:500;white-space:nowrap">${esc(e.nombre)}<div style="font-size:.64rem;color:var(--txt2)">${esc(e.cat||'Sin categoría')}</div></td>
-      <td><span class="pill nd">${jLbl(e.jornada)} · ${e.curso}</span></td>
+      <td><span class="pill nd">${jcLbl(e)}</span></td>
       ${ALLKEYS.map(k=>rec?`<td><select class="ls ${LCSS[rec[k]]||''}" onchange="apoyoLvl(${i},'${sem}','${k}',this)"><option value="">—</option>${LVL.map(l=>`<option value="${l}"${rec[k]===l?' selected':''}>${l[0]+l.slice(1).toLowerCase()}</option>`).join('')}</select></td>`:'<td><span class="pill nd">—</span></td>').join('')}
       </tr>`;}).join('')}
     </tbody></table></div>
@@ -3139,7 +3145,7 @@ function apoyoTabAna(c){
   else apoyoTexto(b,F);
 }
 const pillOf=v=>v?`<span class="pill ${LCSS[v]||'nd'}">${v[0]+v.slice(1).toLowerCase()}</span>`:'<span class="pill nd">—</span>';
-const apoyoScopeLbl=()=>`${APOYO.jornada==='AMBAS'?'Ambas jornadas':jLbl(APOYO.jornada)} · ${APOYO.grado==='TODOS'?'Todos los grados':GN[APOYO.grado]}`;
+const apoyoScopeLbl=()=>`${multiJ()?(APOYO.jornada==='AMBAS'?'Ambas jornadas':jLbl(APOYO.jornada))+' · ':''}${APOYO.grado==='TODOS'?'Todos los grados':GN[APOYO.grado]}`;
 
 function apoyoResumen(b,R,F){
   const sems=activeSems();
@@ -3180,7 +3186,7 @@ function apoyoResumen(b,R,F){
     <div class="cgrid">
       <div class="cc full"><div class="ct">Distribución por Asignatura y Competencia — estudiantes con apoyo</div>${buildSbar(agg)}</div>
       <div class="cc"><div class="ct">Distribución general</div>${buildDonut(B,Ba,A,S)}</div>
-      <div class="cc"><div class="ct">Índice por área (0–100)</div><canvas id="apoyo-rc" width="300" height="265"></canvas></div>
+      <div class="cc"><div class="ct">Índice por área (0–100)</div>${apoyoIdxHTML('apoyo-rc')}</div>
     </div>
     <div class="section-hd">Por categoría</div>
     <div class="stwrap" style="max-height:none;margin-bottom:1.2rem"><table style="min-width:420px"><thead><tr><th>Categoría</th><th>Est.</th><th>Bajo</th><th>Básico</th><th>Alto</th><th>Superior</th></tr></thead><tbody>${catRows}</tbody></table></div>
@@ -3189,11 +3195,11 @@ function apoyoResumen(b,R,F){
       <div style="font-size:.72rem;color:var(--txt2);margin-top:.5rem">La cifra de la derecha es la diferencia, en puntos porcentuales, del % Alto+Superior frente al resto (${R.length-F.length} estudiantes).</div></div>
     <div class="section-hd">Mapa por estudiante — ${SEM_LABEL[heatSem]} (de menor a mayor índice)</div>
     <div class="stwrap" style="max-height:none"><table><thead><tr><th>#</th><th>Estudiante</th><th>Curso</th><th>Categoría</th>${AREAS.map(a=>`<th>${a.short} C1</th><th>${a.short} C2</th>`).join('')}<th>Índice</th><th>Bajos</th></tr></thead><tbody>
-    ${heat.map((x,i)=>`<tr><td class="ntd">${i+1}</td><td style="font-weight:500;white-space:nowrap">${esc(x.e.nombre)}</td><td><span class="pill nd">${jLbl(x.e.jornada)} · ${x.e.curso}</span></td><td style="font-size:.7rem;color:var(--txt2)">${esc(x.e.cat||'—')}</td>
+    ${heat.map((x,i)=>`<tr><td class="ntd">${i+1}</td><td style="font-weight:500;white-space:nowrap">${esc(x.e.nombre)}</td><td><span class="pill nd">${jcLbl(x.e)}</span></td><td style="font-size:.7rem;color:var(--txt2)">${esc(x.e.cat||'—')}</td>
       ${ALLKEYS.map(k=>`<td>${pillOf(x.rec[k])}</td>`).join('')}<td><strong>${x.ix==null?'—':x.ix.toFixed(0)}</strong></td><td>${x.nb>=6?'🔴 ':''}${x.nb}/10</td></tr>`).join('')||`<tr><td colspan="16"><div class="empty-state" style="padding:1rem"><p>Sin registros en este semestre.</p></div></td></tr>`}
     </tbody></table></div>
     <div style="font-size:.72rem;color:var(--txt2);margin-top:.5rem">Índice: Bajo=0, Básico=1, Alto=2, Superior=3, sobre las competencias digitadas (0–100). 🔴 = 6 o más competencias en Bajo.</div></div>`;
-  setTimeout(()=>renderRadar('apoyo-rc',agg),80);
+  setTimeout(()=>apoyoIdxDraw('apoyo-rc',agg),80);
 }
 
 function apoyoEvol(b,F){
@@ -3212,7 +3218,7 @@ function apoyoEvol(b,F){
     up+=u;eq+=q;dn+=d;
     const i1=lvIndex(e.recs.S1),i2=lvIndex(e.recs.S2);
     const di=(i1==null||i2==null)?null:i2-i1;
-    return {di,html:`<tr><td style="font-weight:500;white-space:nowrap">${esc(e.nombre)}<div style="font-size:.64rem;color:var(--txt2)">${jLbl(e.jornada)} · ${e.curso}</div></td>${cells}
+    return {di,html:`<tr><td style="font-weight:500;white-space:nowrap">${esc(e.nombre)}<div style="font-size:.64rem;color:var(--txt2)">${jcLbl(e)}</div></td>${cells}
       <td><span class="ap-up">${u}↑</span> <span class="ap-eq">${q}=</span> <span class="ap-dn">${d}↓</span></td>
       <td>${di==null?'—':`<strong class="${di>0?'ap-up':di<0?'ap-dn':'ap-eq'}">${di>0?'+':''}${di.toFixed(0)}</strong>`}</td></tr>`};
   }).sort((p,q)=>(p.di??0)-(q.di??0));
@@ -3235,15 +3241,15 @@ function apoyoFicha(b,F){
   b.innerHTML=`<div style="max-width:1100px"><div class="ap-filters no-print"><div class="fld"><label class="lbl">Estudiante</label>
     <select style="min-width:260px">${F.map((x,i)=>`<option value="${i}"${x.key===e.key?' selected':''}>${esc(x.nombre)} — ${x.curso}</option>`).join('')}</select></div></div>
     <div class="cc" style="margin-bottom:1rem"><div class="ct" style="font-size:1rem">${esc(e.nombre)}</div>
-      <div style="display:flex;gap:.5rem;flex-wrap:wrap;font-size:.78rem;color:var(--txt2);align-items:center"><span class="pill nd">${GN[e.grado]||e.grado} · ${jLbl(e.jornada)} · Curso ${e.curso}</span><span class="pill nd">${esc(e.cat||'Sin categoría')}</span>${e.nota?`<span>📝 ${esc(e.nota)}</span>`:''}</div></div>
-    <div class="cgrid">${['S1','S2'].filter(s=>e.recs[s]).map(s=>`<div class="cc"><div class="ct">${SEM_LABEL[s]} — índice ${lvIndex(e.recs[s])==null?'—':lvIndex(e.recs[s]).toFixed(0)}</div><canvas id="apoyo-f-${s}" width="300" height="265"></canvas></div>`).join('')}</div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;font-size:.78rem;color:var(--txt2);align-items:center"><span class="pill nd">${GN[e.grado]||e.grado} · ${_JL[e.jornada]?_JL[e.jornada]+' · ':''}Curso ${e.curso}</span><span class="pill nd">${esc(e.cat||'Sin categoría')}</span>${e.nota?`<span>📝 ${esc(e.nota)}</span>`:''}</div></div>
+    <div class="cgrid">${['S1','S2'].filter(s=>e.recs[s]).map(s=>`<div class="cc"><div class="ct">${SEM_LABEL[s]} — índice ${lvIndex(e.recs[s])==null?'—':lvIndex(e.recs[s]).toFixed(0)}</div>${apoyoIdxHTML('apoyo-f-'+s)}</div>`).join('')}</div>
     <div class="stwrap" style="max-height:none;margin-bottom:1rem"><table style="min-width:520px"><thead><tr><th>Asignatura</th><th>C1 · 1er Sem</th><th>C1 · 2do Sem</th><th>C2 · 1er Sem</th><th>C2 · 2do Sem</th></tr></thead><tbody>
       ${AREAS.map(a=>`<tr><td style="font-weight:600">${a.label}</td><td>${pillOf(e.recs.S1?.[a.c1])}</td><td>${pillOf(e.recs.S2?.[a.c1])}</td><td>${pillOf(e.recs.S1?.[a.c2])}</td><td>${pillOf(e.recs.S2?.[a.c2])}</td></tr>`).join('')}</tbody></table></div>
     <div class="cmpbox"><div class="abox-t" style="color:var(--acc3)">✍️ Observaciones de Apoyo — ${esc(e.nombre)}</div>
       <div class="ata-wrapper"><textarea class="ata" id="ta_ficha" rows="6" placeholder="Fortalezas, barreras, ajustes razonables, acuerdos con familia y docentes..." oninput="incSetTxt('FICHA|'+APOYO.ficha,this.value);updCC('ta_ficha')">${esc(incTxt(tk))}</textarea><span class="char-count" id="cc_ficha">${incTxt(tk).length} car.</span></div></div></div>`;
   // el <select> usa el índice de la lista para no meter nombres en atributos
   b.querySelector('select').onchange=function(){APOYO.ficha=F[+this.value].key;apoyoRender();};
-  setTimeout(()=>['S1','S2'].forEach(s=>{if(e.recs[s])renderRadar('apoyo-f-'+s,aggAll([e.recs[s]]));}),80);
+  setTimeout(()=>['S1','S2'].forEach(s=>{if(e.recs[s])apoyoIdxDraw('apoyo-f-'+s,aggAll([e.recs[s]]));}),80);
 }
 
 function apoyoTexto(b,F){
