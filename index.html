@@ -1525,7 +1525,7 @@ async function _fbPush(){
   if(h===_lastIdxHash)return;
   syncBadge('syncing','Guardando...');
   try{
-    await _fbDb.ref('ps_index').set(IDX);
+    await _fbDb.ref('ps_index').set(JSON.parse(JSON.stringify(IDX))); // elimina undefined que Firebase rechaza
     _lastIdxHash=h;
     const t=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
     syncBadge('ok','Firebase ✓ '+t);
