@@ -1641,12 +1641,14 @@ function docenteChangeGrado(){
 }
 
 function _loadSpaceIntoST(sp){
+  // El docente entra directo a Segundo Semestre (si el espacio lo tiene)
+  const startSem=(CURRENT_ROLE==='docente'&&sp.sems.includes('S2'))?'S2':sp.sems[0];
   ST={
     _version:FILE_VERSION,inst:IDX.inst,
     grado:sp.grado,year:sp.year,sems:sp.sems,
     jornada:sp.jornada||'',seccion:sp.seccion||'',
-    activeSem:sp.sems[0],
-    activeCourse:Object.keys(sp.data[sp.sems[0]]||{})[0]||null,
+    activeSem:startSem,
+    activeCourse:Object.keys(sp.data[startSem]||{})[0]||null,
     activeAnalysisTab:'resumen',
     data:sp.data,analysis:sp.analysis,competencias:sp.competencias,
   };
