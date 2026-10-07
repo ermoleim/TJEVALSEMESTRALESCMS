@@ -1641,6 +1641,13 @@ function docenteChangeGrado(){
 }
 
 function _loadSpaceIntoST(sp){
+  // Firebase no guarda objetos vacíos: reponer analysis/competencias/data faltantes
+  // (si no, las pestañas 2do Semestre y Comparativo fallan al leer ST.analysis)
+  sp.data=sp.data||{};
+  sp.analysis=sp.analysis||{};
+  ['S1','S2','CMP','FINAL'].forEach(k=>{if(!sp.analysis[k])sp.analysis[k]={};});
+  sp.competencias=sp.competencias||{};
+  (sp.sems||[]).forEach(s=>{if(!sp.data[s])sp.data[s]={};});
   // El docente entra directo a Segundo Semestre (si el espacio lo tiene)
   const startSem=(CURRENT_ROLE==='docente'&&sp.sems.includes('S2'))?'S2':sp.sems[0];
   ST={
