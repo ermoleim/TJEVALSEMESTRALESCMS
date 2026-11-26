@@ -6,6 +6,7 @@
 <title>Pruebas Semestrales — Colegio Miguel de Cervantes Saavedra I.E.D.</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
 <style>
 /* ── TEMAS ── */
@@ -1411,6 +1412,27 @@ function _fbInit(){
   }
 }
 
+// Inicio de sesión anónimo: las reglas de Firebase exigen auth != null,
+// así cada navegador obtiene una identidad antes de leer/escribir.
+let _fbAuthP=null;
+function _fbEnsureAuth(){
+  if(_fbAuthP)return _fbAuthP;
+  _fbAuthP=new Promise((res,rej)=>{
+    try{
+      const a=firebase.auth();
+      let signing=false;
+      const un=a.onAuthStateChanged(u=>{
+        if(u){un();res(u);}
+        else if(!signing){
+          signing=true;
+          a.signInAnonymously().catch(e=>{un();_fbAuthP=null;rej(e);});
+        }
+      });
+    }catch(e){_fbAuthP=null;rej(e);}
+  });
+  return _fbAuthP;
+}
+
 function saveFirebaseConfigFromInput(){
   const el=document.getElementById('firebase-config-input');
   const status=document.getElementById('firebase-status');
@@ -1431,6 +1453,7 @@ async function testFirebaseConnection(){
   if(!_fbInit()){status.style.color='var(--bajo)';status.textContent='⚠ No se pudo inicializar Firebase con esa configuración. Revisa que sea el firebaseConfig completo y correcto.';return;}
   status.style.color='var(--txt2)';status.textContent='Conectando...';
   try{
+    await _fbEnsureAuth();
     const snap=await _fbDb.ref('.info/connected').once('value');
     await new Promise(r=>setTimeout(r,800));
     const snap2=await _fbDb.ref('.info/connected').once('value');
@@ -1458,6 +1481,7 @@ async function importSheetsToFirebase(){
   if(!confirm('¿Importar '+keys.length+' grado(s) desde Sheets a Firebase?\n\nEsto reemplaza lo que haya en Firebase ahora mismo (si algo hay).'))return;
   status.textContent='Subiendo a Firebase...';
   try{
+    await _fbEnsureAuth();
     await _fbDb.ref('ps_index').set(remote);
     IDX=remote;_lastIdxHash=idxHash();
     status.style.color='var(--sup)';status.textContent='✓ Importado: '+keys.length+' grado(s). Ya está en Firebase y sincronizando en tiempo real.';
@@ -1515,13 +1539,22 @@ function _fbApplyRemote(remote){
 }
 
 // Arranca (o reutiliza) la conexión en vivo.
-function startFirebaseSync(){
+async function startFirebaseSync(){
   if(!_fbInit()){
     syncBadge('off','Firebase sin configurar');
     return;
   }
   if(_fbListenerAttached)return;
   _fbListenerAttached=true;
+  try{ await _fbEnsureAuth(); }
+  catch(e){
+    _fbListenerAttached=false;
+    console.error('[Firebase] auth anónima falló:', e);
+    _fbAlert('sin sesión anónima: '+e.message);
+    syncBadge('err','Firebase: sin sesión');
+    setTimeout(()=>{ if(!_fbListenerAttached)startFirebaseSync(); },15000);
+    return;
+  }
 
   setInterval(()=>{ if(_fbPendingRemote&&_safeToRefresh()){ _fbApplyRemote(_fbPendingRemote); _fbPendingRemote=null; } },2000);
 
@@ -1567,6 +1600,7 @@ async function _fbPush(){
   if(h===_lastIdxHash)return;
   syncBadge('syncing','Guardando...');
   try{
+    await _fbEnsureAuth();
     await _fbDb.ref('ps_index').set(JSON.parse(JSON.stringify(IDX))); // elimina undefined que Firebase rechaza
     _lastIdxHash=h;
     const t=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
@@ -3206,7 +3240,7 @@ function apoyoLvl(i,sem,k,sel){
   loc.rec[k]=v;sel.className='ls '+(v?LCSS[v]||'':'');
   if(hasFirebaseConfig()&&_fbInit()){
     // Con Firebase en vivo se escribe SOLO esa celda (no todo el índice): no pisa lo que otros digitan a la vez
-    _fbDb.ref(`ps_index/grados/${e.sk}/data/${sem}/${loc.course}/${loc.idx}/${k}`).set(v)
+    _fbEnsureAuth().then(()=>_fbDb.ref(`ps_index/grados/${e.sk}/data/${sem}/${loc.course}/${loc.idx}/${k}`).set(v))
       .then(()=>apoyoStatus('ok','Guardado en vivo'))
       .catch(err=>{console.error('[Apoyo] celda',err);toast('⚠ No se guardó en Firebase: '+err.message,'err',6000);});
     try{localStorage.setItem(IDX_LOCAL_KEY,JSON.stringify(IDX));}catch{}
@@ -3424,7 +3458,7 @@ async function init(){
         // Si Firebase está configurado pero todavía no tenía datos, se
         // aprovecha para sembrarlo con lo que había en Sheets.
         if(hasFirebaseConfig()&&_fbDb){
-          try{ const snap=await _fbDb.ref('ps_index').once('value'); if(!snap.exists())await _fbDb.ref('ps_index').set(remote); }catch{}
+          try{ await _fbEnsureAuth(); const snap=await _fbDb.ref('ps_index').once('value'); if(!snap.exists())await _fbDb.ref('ps_index').set(remote); }catch{}
         }
       }
     }
